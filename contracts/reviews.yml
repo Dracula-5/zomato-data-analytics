@@ -1,0 +1,31 @@
+table: reviews
+file: reviews.csv
+kind: fact
+description: >-
+  Free-text customer reviews (SYNTHETIC; the real file has only 294 distinct comment
+  strings). Partitioned by review date, the day each review arrives.
+primary_key: [review_id]
+partition_by: review_date
+sample_by: order
+columns:
+  - name: review_id
+    type: BIGINT
+    description: Review identifier.
+  - name: order_id
+    type: BIGINT
+    description: Order being reviewed (references orders.order_id).
+  - name: user_id
+    type: BIGINT
+    description: Reviewer as recorded on the review; may disagree with the order's customer.
+  - name: restaurant_id
+    type: BIGINT
+    description: Restaurant as recorded on the review; may disagree with the order's restaurant.
+  - name: rating
+    type: INTEGER
+    description: Star rating 1-5.
+  - name: comment
+    description: Review text written by the customer.
+    classification: internal
+  - name: review_date
+    type: DATE
+    description: Date the review was written; the lake partition key.

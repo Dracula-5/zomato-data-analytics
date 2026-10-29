@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     lake_dir: Path = Field(default=Path("lake"), description="Local stand-in for the S3 lake")
     warehouse_dir: Path = Field(default=Path("warehouse"), description="DuckDB files")
     artifacts_dir: Path = Field(default=Path("artifacts"), description="Run outputs and metrics")
+    contracts_dir: Path = Field(default=Path("contracts"), description="Schema contract YAMLs")
 
     # How to run
     target: Target = "duckdb"

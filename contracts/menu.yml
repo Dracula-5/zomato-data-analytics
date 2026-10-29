@@ -1,0 +1,21 @@
+# Column names follow the reference repo's RAW DDL. When the real menu.csv arrives,
+# `zap drift-check` compares its header against this file and flags any difference.
+table: menu
+file: menu.csv
+kind: dimension
+description: Which restaurant sells which food item, and at what price (restaurant x food bridge).
+has_index_column: true
+primary_key: [menu_id]
+columns:
+  - name: menu_id
+    description: Menu line identifier.
+  - name: r_id
+    description: Restaurant identifier (references restaurant.id).
+  - name: f_id
+    description: Food item identifier (references food.f_id).
+  - name: cuisine
+    description: Cuisine the item is listed under at this restaurant.
+    classification: public
+  - name: price
+    description: Listed price of the item in INR, as text.
+    classification: public

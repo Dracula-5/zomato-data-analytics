@@ -1,0 +1,41 @@
+# Column names follow the reference repo's RAW DDL. When the real users.csv arrives,
+# `zap drift-check` compares its header against this file and flags any difference.
+table: users
+file: users.csv
+kind: dimension
+description: >-
+  Registered customers with demographic attributes. Contains personal data, so the
+  personal columns are classified and masked or dropped downstream.
+has_index_column: true
+primary_key: [user_id]
+columns:
+  - name: user_id
+    description: Customer identifier (pseudonymous key used by orders).
+  - name: name
+    description: Customer full name.
+    classification: pii
+  - name: email
+    description: Customer email address.
+    classification: pii
+  - name: password
+    description: >-
+      Account password as stored in the source (plain text). Never propagated past the raw
+      layer; dropped in staging.
+    classification: secret
+  - name: age
+    description: Customer age in years.
+  - name: gender
+    description: Self-reported gender.
+    classification: pii
+  - name: marital_status
+    description: Self-reported marital status.
+    classification: pii
+  - name: occupation
+    description: Occupation category, e.g. "Student" or "Employee".
+  - name: monthly_income
+    description: Monthly income bracket as text.
+    classification: pii
+  - name: education
+    description: Highest educational qualification.
+  - name: family_size
+    description: Number of people in the household.

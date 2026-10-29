@@ -1,0 +1,39 @@
+table: restaurant
+file: restaurant.csv
+kind: dimension
+description: >-
+  Restaurants listed on the platform, one row per restaurant. Scraped from a
+  food-delivery site, so most fields are display text and are typed in staging.
+has_index_column: true
+primary_key: [id]
+columns:
+  - name: id
+    description: Restaurant identifier from the source platform.
+  - name: name
+    description: Restaurant display name.
+    classification: public
+  - name: city
+    description: Location as "Area,City" (e.g. "Koramangala,Bangalore") or just "City".
+    classification: public
+  - name: rating
+    description: Average customer rating 0-5 as text; "--" when there are too few ratings.
+    classification: public
+  - name: rating_count
+    description: Bucketed number of ratings as text, e.g. "50+ ratings" or "Too Few Ratings".
+    classification: public
+  - name: cost
+    description: Approximate cost for two as display text, e.g. "₹ 200".
+    classification: public
+  - name: cuisine
+    description: Comma-separated list of cuisines served.
+    classification: public
+  - name: lic_no
+    description: Food-safety (FSSAI) licence number of the business.
+  - name: link
+    description: URL of the restaurant page on the source site.
+    classification: public
+  - name: address
+    description: Street address of the restaurant (a business address; may contain newlines).
+    classification: public
+  - name: menu
+    description: Path of the source menu JSON file. The JSON files are not part of the dataset.

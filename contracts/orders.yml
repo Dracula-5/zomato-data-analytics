@@ -1,0 +1,62 @@
+table: orders
+file: orders.csv
+kind: fact
+description: >-
+  One row per customer order (SYNTHETIC in this dataset). Machine-generated and clean,
+  so types are enforced strictly at ingestion.
+primary_key: [order_id]
+partition_by: order_date
+sample_by: user
+columns:
+  - name: order_id
+    type: BIGINT
+    description: Order identifier.
+  - name: order_timestamp
+    type: TIMESTAMP
+    description: Local date and time the order was placed.
+  - name: order_date
+    type: DATE
+    description: Calendar date of order_timestamp; the lake partition key.
+  - name: user_id
+    type: BIGINT
+    description: Customer who placed the order (references users.user_id).
+  - name: r_id
+    type: BIGINT
+    description: Restaurant that received the order (references restaurant.id).
+  - name: restaurant_city
+    description: Restaurant location at order time, "Area,City" or "City".
+  - name: cuisine
+    description: Restaurant cuisines at order time, comma-separated.
+  - name: items_count
+    type: BIGINT
+    description: Number of distinct menu lines in the order.
+  - name: sales_qty
+    type: BIGINT
+    description: Total units across all lines.
+  - name: subtotal
+    type: BIGINT
+    description: Sum of line amounts before discount, fees and tax (INR).
+  - name: discount
+    type: BIGINT
+    description: Discount applied (INR).
+  - name: delivery_fee
+    type: BIGINT
+    description: Delivery fee charged (INR).
+  - name: gst
+    type: BIGINT
+    description: Goods and Services Tax (INR), 5% of subtotal.
+  - name: sales_amount
+    type: BIGINT
+    description: Amount paid = subtotal - discount + delivery_fee + gst (INR).
+  - name: currency
+    description: ISO currency code; always "INR".
+  - name: payment_method
+    description: One of UPI, Card, Wallet, COD, NetBanking.
+  - name: order_status
+    description: One of Delivered, Cancelled, Refunded.
+  - name: customer_rating
+    type: DOUBLE
+    description: Customer rating 1-5 for delivered orders; empty otherwise.
+  - name: delivery_time_min
+    type: DOUBLE
+    description: Minutes from order to delivery for delivered orders; empty otherwise.

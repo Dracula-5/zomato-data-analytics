@@ -354,8 +354,8 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 
 ## 12. Task list
 
-- [ ] M0 Scaffold & tooling
-- [ ] M1 Ingest, lake, contracts, drift, sample
+- [x] M0 Scaffold & tooling
+- [x] M1 Ingest, lake, contracts, drift, sample (users, menu, order_items pending D1)
 - [ ] M2 dbt (DuckDB), governance, GX, benchmarks
 - [ ] M3 Streamlit dashboard
 - [ ] M4 Airflow (local)

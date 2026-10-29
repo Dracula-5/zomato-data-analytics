@@ -7,7 +7,10 @@ UV ?= uv
 RUN := $(UV) run
 export PYTHONUTF8 := 1
 
-.PHONY: help setup lint format typecheck test check hooks fixtures info
+SAMPLE_PCT ?= 5
+
+.PHONY: help setup lint format typecheck test check hooks fixtures info \
+        drift-check ingest ingest-full ingest-fixture
 
 help: ## Show this list
 	@$(RUN) python scripts/make_help.py $(firstword $(MAKEFILE_LIST))
@@ -40,3 +43,15 @@ fixtures: ## Generate the SYNTHETIC fixture dataset into .cache/fixture
 
 info: ## Show resolved settings (secrets masked)
 	$(RUN) zap info
+
+drift-check: ## Compare the source CSVs in DATA_DIR with their contracts
+	$(RUN) zap drift-check
+
+ingest: ## Load DATA_DIR into the lake as a SAMPLE_PCT% sample (default 5)
+	$(RUN) zap ingest --sample-pct $(SAMPLE_PCT)
+
+ingest-full: ## Load all of DATA_DIR into the lake
+	$(RUN) zap ingest --sample-pct 100
+
+ingest-fixture: fixtures ## Load the SYNTHETIC fixture into lake/fixture
+	$(RUN) zap ingest --source .cache/fixture --sample-pct 100 --dataset fixture

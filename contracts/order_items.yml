@@ -1,0 +1,35 @@
+# Column names follow the reference repo's RAW DDL. When the real order_items.csv arrives,
+# `zap drift-check` compares its header against this file and flags any difference.
+table: order_items
+file: order_items.csv
+kind: fact
+description: >-
+  One row per line of an order (SYNTHETIC). The file has no date, so each line is
+  partitioned by its parent order's order_date, looked up from orders at ingestion.
+primary_key: [order_item_id]
+partition_by: order_date
+partition_lookup:
+  table: orders
+  key: order_id
+sample_by: order
+columns:
+  - name: order_item_id
+    type: BIGINT
+    description: Order line identifier.
+  - name: order_id
+    type: BIGINT
+    description: Parent order (references orders.order_id).
+  - name: r_id
+    type: BIGINT
+    description: Restaurant (references restaurant.id).
+  - name: f_id
+    description: Food item (references food.f_id).
+  - name: price
+    type: DECIMAL(12,2)
+    description: Unit price charged (INR).
+  - name: quantity
+    type: BIGINT
+    description: Units ordered.
+  - name: line_amount
+    type: DECIMAL(12,2)
+    description: price x quantity (INR).

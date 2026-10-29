@@ -1,0 +1,15 @@
+table: food
+file: food.csv
+kind: dimension
+description: Catalogue of food items (dishes) that appear on restaurant menus.
+has_index_column: true
+primary_key: [f_id]
+columns:
+  - name: f_id
+    description: Food item identifier, e.g. "fd123".
+  - name: item
+    description: Dish name as listed on the menu.
+    classification: public
+  - name: veg_or_non_veg
+    description: Dietary flag, "Veg" or "Non-veg".
+    classification: public

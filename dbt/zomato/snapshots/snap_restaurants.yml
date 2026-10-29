@@ -1,0 +1,13 @@
+snapshots:
+  - name: snap_restaurants
+    relation: ref('stg_restaurants')
+    description: >-
+      Type-2 slowly changing history of restaurants. When a tracked attribute changes,
+      the old row is closed (dbt_valid_to set) and a new current row is opened, so past
+      orders can be analysed with the attributes that were true at the time.
+    config:
+      schema: snapshots
+      unique_key: restaurant_id
+      strategy: check
+      check_cols: [restaurant_name, location_raw, rating, rating_count_bucket, cost_for_two, cuisines]
+      hard_deletes: invalidate

@@ -1,0 +1,42 @@
+name: zomato
+version: "1.0.0"
+config-version: 2
+profile: zomato
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+target-path: target
+clean-targets: [target, dbt_packages]
+
+vars:
+  lookback_days: 3            # incremental facts reprocess this many recent days
+  delivery_sla_minutes: 40    # promised delivery time; slower is an SLA breach
+  cost_outlier_inr: 5000      # cost-for-two above this is flagged as an outlier
+  date_spine_start: "2024-01-01"
+  date_spine_end: "2027-01-01"
+
+models:
+  zomato:
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+    governance:
+      +schema: governance
+      +materialized: table
+
+seeds:
+  zomato:
+    +schema: governance
+
+data_tests:
+  zomato:
+    +store_failures: false

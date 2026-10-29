@@ -10,7 +10,7 @@ export PYTHONUTF8 := 1
 SAMPLE_PCT ?= 5
 
 .PHONY: help setup lint format typecheck test check hooks fixtures info \
-        drift-check ingest ingest-full ingest-fixture
+        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve bench
 
 help: ## Show this list
 	@$(RUN) python scripts/make_help.py $(firstword $(MAKEFILE_LIST))
@@ -55,3 +55,23 @@ ingest-full: ## Load all of DATA_DIR into the lake
 
 ingest-fixture: fixtures ## Load the SYNTHETIC fixture into lake/fixture
 	$(RUN) zap ingest --source .cache/fixture --sample-pct 100 --dataset fixture
+
+local: ## Whole pipeline on a SAMPLE_PCT% sample of DATA_DIR (default 5%), zero cloud cost
+	$(RUN) zap local --sample-pct $(SAMPLE_PCT)
+
+local-full: ## Whole pipeline on all of DATA_DIR
+	$(RUN) zap local --sample-pct 100
+
+demo: fixtures ## Whole pipeline on the SYNTHETIC fixture (no dataset download needed)
+	$(RUN) zap local --source .cache/fixture --sample-pct 100 --dataset fixture
+
+docs: ## dbt docs + regenerate docs/DATA_DICTIONARY.md (uses the SAMPLE_PCT warehouse)
+	$(RUN) zap gen-dbt-sources
+	$(RUN) zap dbt docs generate
+	$(RUN) zap data-dictionary
+
+docs-serve: ## Browse the dbt docs site (lineage graph) at http://localhost:8081
+	$(RUN) zap dbt docs serve --port 8081
+
+bench: ## Benchmarks on the full dataset: incremental vs full refresh, fact vs mart query
+	$(RUN) zap bench all --dataset full

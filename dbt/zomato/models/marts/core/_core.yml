@@ -1,0 +1,226 @@
+version: 2
+
+models:
+  - name: dim_restaurant
+    description: Current attributes of every restaurant (open rows of the SCD2 snapshot).
+    columns:
+      - name: restaurant_id
+        description: Restaurant identifier (natural key from the source platform).
+        data_tests: [unique, not_null]
+      - name: restaurant_name
+        description: Display name.
+      - name: locality
+        description: Area within the city; null when the source gave only a city.
+      - name: city
+        description: City the restaurant is in.
+      - name: rating
+        description: Listed average rating 0-5; null when hidden.
+      - name: rating_count_bucket
+        description: Source rating-count text, e.g. "50+ ratings".
+      - name: rating_count_floor
+        description: Lower bound of the rating count.
+      - name: cost_for_two
+        description: Approximate cost for two (INR).
+      - name: cuisines
+        description: Comma-separated cuisines.
+      - name: primary_cuisine
+        description: First listed cuisine.
+      - name: licence_number
+        description: Food-safety licence number of the business.
+      - name: source_url
+        description: Restaurant page on the source site.
+      - name: address
+        description: Business address on one line.
+      - name: valid_from
+        description: When this version of the restaurant became current (snapshot time).
+
+  - name: dim_food
+    description: Food items.
+    columns:
+      - name: food_id
+        description: Food item identifier.
+        data_tests: [unique, not_null]
+      - name: food_name
+        description: Dish name.
+      - name: is_veg
+        description: Vegetarian flag; null when the source flag was invalid.
+
+  - name: dim_city
+    description: Cities with restaurant counts, rolled up from localities.
+    columns:
+      - name: city
+        description: City name.
+        data_tests: [unique, not_null]
+      - name: localities
+        description: Distinct localities with at least one restaurant.
+      - name: restaurants
+        description: Restaurants listed in the city.
+      - name: avg_restaurant_rating
+        description: Mean listed rating of rated restaurants.
+      - name: avg_cost_for_two
+        description: Mean cost for two (INR).
+
+  - name: dim_customer
+    description: >-
+      One row per customer (everyone who ordered plus registered users). PII policy: no
+      names or sensitive attributes; email only masked and as a salted hash.
+    columns:
+      - name: customer_id
+        description: Customer identifier (pseudonymous).
+        data_tests: [unique, not_null]
+      - name: email_masked
+        description: Email with the local part masked, e.g. "r***@example.com".
+        meta: {classification: pii, handling: masked}
+      - name: email_hash
+        description: Salted SHA-256 of the lower-cased email; a join key with no readable value.
+        meta: {classification: pii, handling: hashed}
+      - name: age_band
+        description: Age bucket (18-24, 25-34, 35-44, 45+, unknown).
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["18-24", "25-34", "35-44", "45+", "unknown"]}
+      - name: occupation
+        description: Occupation category.
+      - name: education
+        description: Highest qualification.
+      - name: family_size
+        description: Household size.
+      - name: is_registered
+        description: True when the customer exists in the users extract.
+      - name: first_order_date
+        description: Date of the first order.
+      - name: last_order_date
+        description: Date of the latest order.
+      - name: lifetime_orders
+        description: Orders placed (including cancelled and refunded).
+
+  - name: dim_date
+    description: Calendar from date_spine_start to date_spine_end.
+    columns:
+      - name: date_day
+        description: Calendar date.
+        data_tests: [unique, not_null]
+      - name: iso_day_of_week
+        description: Monday = 1 ... Sunday = 7.
+      - name: is_weekend
+        description: Saturday or Sunday.
+
+  - name: fct_orders
+    description: >-
+      One row per valid order (quarantined orders excluded). Incremental MERGE on order_id
+      over the last `lookback_days` of order dates.
+    columns:
+      - name: order_id
+        description: Order identifier.
+        data_tests: [unique, not_null]
+      - name: order_timestamp
+        description: When the order was placed.
+      - name: order_date
+        description: Order date (partition key).
+        data_tests: [not_null]
+      - name: order_hour
+        description: Hour of day 0-23.
+      - name: customer_id
+        description: Customer (see dim_customer).
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_customer'), field: customer_id}
+      - name: restaurant_id
+        description: Restaurant (see dim_restaurant).
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_restaurant'), field: restaurant_id}
+      - name: city
+        description: Restaurant city at order time.
+      - name: order_status
+        description: Delivered, Cancelled or Refunded.
+      - name: sales_amount
+        description: Amount paid (INR) = subtotal - discount + delivery_fee + gst.
+        data_tests:
+          - dbt_utils.expression_is_true:
+              arguments: {expression: "= subtotal - discount + delivery_fee + gst"}
+      - name: delivery_time_min
+        description: Minutes to deliver; null unless delivered.
+      - name: is_sla_breach
+        description: Delivered slower than `delivery_sla_minutes`.
+
+  - name: fct_order_items
+    description: One row per valid order line.
+    columns:
+      - name: order_item_id
+        description: Order line identifier.
+        data_tests: [unique, not_null]
+      - name: order_id
+        description: Parent order.
+        data_tests:
+          - relationships:
+              arguments: {to: ref('fct_orders'), field: order_id}
+      - name: food_id
+        description: Food item (see dim_food).
+
+  - name: fct_reviews
+    description: >-
+      One row per valid review, with customer and restaurant resolved from the order
+      (the order is the source of truth) and flags for each inconsistency found.
+    columns:
+      - name: review_id
+        description: Review identifier.
+        data_tests: [unique, not_null]
+      - name: order_id
+        description: Reviewed order.
+        data_tests:
+          - relationships:
+              arguments: {to: ref('fct_orders'), field: order_id}
+      - name: rating
+        description: Stars 1-5.
+      - name: comment
+        description: Review text.
+      - name: had_user_mismatch
+        description: The recorded reviewer differed from the order's customer.
+      - name: had_restaurant_mismatch
+        description: The recorded restaurant differed from the order's restaurant.
+      - name: is_before_order
+        description: Review dated before its order.
+      - name: is_on_undelivered_order
+        description: Review on a cancelled or refunded order.
+
+unit_tests:
+  - name: customer_email_is_masked_and_hashed
+    description: Marts never expose a raw email; age is bucketed.
+    model: dim_customer
+    given:
+      - input: ref('stg_orders')
+        rows:
+          - {customer_id: 1, order_date: "2026-01-01"}
+          - {customer_id: 2, order_date: "2026-01-02"}
+      - input: ref('stg_users')
+        rows:
+          - {user_id: 1, email: "riya.sharma@example.com", age: 30}
+          - {user_id: 3, email: "not-an-email", age: null}
+    expect:
+      rows:
+        - {customer_id: 1, email_masked: "r***@example.com", age_band: "25-34",
+           is_registered: true, lifetime_orders: 1}
+        - {customer_id: 2, email_masked: null, age_band: "unknown",
+           is_registered: false, lifetime_orders: 1}
+        - {customer_id: 3, email_masked: "***", age_band: "unknown",
+           is_registered: true, lifetime_orders: 0}
+
+  - name: quarantined_orders_are_excluded_and_sla_flagged
+    model: fct_orders
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('stg_orders')
+        rows:
+          - {order_id: 1, order_date: "2026-01-01", is_delivered: true, delivery_time_min: 55}
+          - {order_id: 2, order_date: "2026-01-01", is_delivered: true, delivery_time_min: 20}
+          - {order_id: 3, order_date: "2026-01-01", is_delivered: false}
+      - input: ref('dq_quarantine')
+        rows:
+          - {table_name: "orders", record_key: "3", rule_id: "ORD_AMOUNT_MISMATCH"}
+    expect:
+      rows:
+        - {order_id: 1, is_sla_breach: true}
+        - {order_id: 2, is_sla_breach: false}

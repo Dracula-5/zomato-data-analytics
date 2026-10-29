@@ -1,0 +1,127 @@
+version: 2
+
+models:
+  - name: stg_restaurants
+    description: Restaurants with display text parsed into typed columns.
+    columns:
+      - name: restaurant_id
+        description: Restaurant identifier.
+        data_tests: [unique, not_null]
+      - name: locality
+        description: Area within the city ("Koramangala"); null when the source had only a city.
+      - name: city
+        description: City, the last comma-separated part of the source location.
+        data_tests: [not_null]
+      - name: rating
+        description: Average rating 0-5; null when hidden ("--") or missing.
+        data_tests:
+          - dbt_utils.accepted_range: {arguments: {min_value: 0, max_value: 5}}
+      - name: rating_count_floor
+        description: Lower bound of the bucketed rating count ("1K+ ratings" -> 1000).
+      - name: cost_for_two
+        description: Approximate cost for two in INR, parsed from "₹ 200"; null if unparseable.
+
+  - name: stg_food
+    description: Food items with a boolean veg flag.
+    columns:
+      - name: food_id
+        description: Food item identifier.
+        data_tests: [unique, not_null]
+      - name: is_veg
+        description: True for Veg, false for Non-veg, null when the source flag is invalid.
+
+  - name: stg_menu
+    description: Restaurant x food menu lines with a numeric price.
+    columns:
+      - name: menu_id
+        data_tests: [unique, not_null]
+
+  - name: stg_users
+    description: Registered users. The plain-text password is never selected.
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+      - name: email
+        description: Lower-cased email (PII; raw value stays in the staging schema).
+        meta: {classification: pii}
+
+  - name: stg_orders
+    description: Orders, de-duplicated on order_id, with status flags and city parsed.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: order_status
+        data_tests:
+          - accepted_values:
+              arguments: {values: [Delivered, Cancelled, Refunded]}
+      - name: payment_method
+        data_tests:
+          - accepted_values:
+              arguments: {values: [UPI, Card, Wallet, COD, NetBanking]}
+
+  - name: stg_order_items
+    description: Order lines, de-duplicated on order_item_id.
+    columns:
+      - name: order_item_id
+        data_tests: [unique, not_null]
+
+  - name: stg_reviews
+    description: Reviews as written, de-duplicated on review_id.
+    columns:
+      - name: review_id
+        data_tests: [unique, not_null]
+      - name: rating
+        data_tests:
+          - dbt_utils.accepted_range: {arguments: {min_value: 1, max_value: 5}}
+
+  - name: int_dq_violations
+    description: >-
+      Every rule in seeds/dq_rules.csv evaluated per record. One row = one record that
+      broke one rule, with the rule's severity and action.
+    columns:
+      - name: rule_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dq_rules'), field: rule_id}
+
+unit_tests:
+  - name: restaurant_text_is_parsed
+    description: Location, rating, rating-count bucket, cost and address parsing.
+    model: stg_restaurants
+    given:
+      - input: source('raw', 'restaurant')
+        rows:
+          - {id: "101", name: " Spice Hub ", city: "Koramangala,Bangalore", rating: "4.3",
+             rating_count: "1K+ ratings", cost: "₹ 1,200", cuisine: "North Indian,Chinese",
+             address: "Shop 4,\nMain   Rd"}
+          - {id: "102", name: "Desi", city: "Bikaner", rating: "--",
+             rating_count: "Too Few Ratings", cost: null, cuisine: "Sweets", address: "x"}
+          - {id: "103", name: "Tri", city: "Sector 5,Salt Lake,Kolkata", rating: "3.9",
+             rating_count: "20+ ratings", cost: "₹ 300", cuisine: "Bakery", address: "y"}
+    expect:
+      rows:
+        - {restaurant_id: 101, restaurant_name: "Spice Hub", locality: "Koramangala",
+           city: "Bangalore", rating: 4.3, rating_count_floor: 1000, cost_for_two: 1200,
+           primary_cuisine: "North Indian", address: "Shop 4, Main Rd"}
+        - {restaurant_id: 102, restaurant_name: "Desi", locality: null, city: "Bikaner",
+           rating: null, rating_count_floor: 0, cost_for_two: null, primary_cuisine: "Sweets",
+           address: "x"}
+        - {restaurant_id: 103, restaurant_name: "Tri", locality: "Sector 5", city: "Kolkata",
+           rating: 3.9, rating_count_floor: 20, cost_for_two: 300, primary_cuisine: "Bakery",
+           address: "y"}
+
+  - name: duplicate_orders_are_collapsed
+    model: stg_orders
+    given:
+      - input: source('raw', 'orders')
+        rows:
+          - {order_id: 1, order_status: "Delivered", restaurant_city: "HSR,Bangalore",
+             order_timestamp: "2026-01-05 19:30:00", _loaded_at: "2026-01-06 00:00:00"}
+          - {order_id: 1, order_status: "Delivered", restaurant_city: "HSR,Bangalore",
+             order_timestamp: "2026-01-05 19:30:00", _loaded_at: "2026-01-06 00:00:00"}
+          - {order_id: 2, order_status: "Cancelled", restaurant_city: "Kanpur",
+             order_timestamp: "2026-01-05 08:05:00", _loaded_at: "2026-01-06 00:00:00"}
+    expect:
+      rows:
+        - {order_id: 1, city: "Bangalore", locality: "HSR", order_hour: 19, is_delivered: true}
+        - {order_id: 2, city: "Kanpur", locality: null, order_hour: 8, is_delivered: false}

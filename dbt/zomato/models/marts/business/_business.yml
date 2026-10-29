@@ -1,0 +1,87 @@
+version: 2
+
+models:
+  - name: mart_city_daily
+    description: >-
+      Daily KPIs per city: orders by status, GMV (delivered order value), AOV, cancel rate,
+      discount rate and active customers. Contract enforced.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [order_date, city]}
+    columns:
+      - {name: order_date, data_type: date, description: Order date., constraints: [{type: not_null}]}
+      - {name: city, data_type: varchar, description: City.}
+      - {name: orders, data_type: bigint, description: All orders placed.}
+      - {name: delivered_orders, data_type: bigint, description: Orders delivered.}
+      - {name: cancelled_orders, data_type: bigint, description: Orders cancelled.}
+      - {name: refunded_orders, data_type: bigint, description: Orders refunded.}
+      - {name: gmv, data_type: bigint, description: Gross merchandise value - sum of sales_amount of delivered orders (INR).}
+      - {name: aov, data_type: double, description: Average order value = GMV / delivered orders (INR).}
+      - name: cancel_rate
+        data_type: double
+        description: Cancelled / all orders.
+        data_tests:
+          - dbt_utils.accepted_range: {arguments: {min_value: 0, max_value: 1}}
+      - {name: discount_rate, data_type: double, description: Discount / subtotal.}
+      - {name: active_customers, data_type: bigint, description: Distinct customers who ordered that day.}
+
+  - name: mart_daily_kpis
+    description: National daily KPIs; the input series for forecasting. Contract enforced.
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: order_date
+        data_type: date
+        description: Order date.
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - {name: iso_day_of_week, data_type: integer, description: Monday = 1 ... Sunday = 7.}
+      - {name: is_weekend, data_type: boolean, description: Saturday or Sunday.}
+      - {name: orders, data_type: bigint, description: All orders placed.}
+      - {name: delivered_orders, data_type: bigint, description: Orders delivered.}
+      - {name: gmv, data_type: bigint, description: Delivered order value (INR).}
+      - {name: aov, data_type: double, description: GMV / delivered orders (INR).}
+      - {name: cancel_rate, data_type: double, description: Cancelled / all orders.}
+      - {name: sla_breach_rate, data_type: double, description: Share of delivered orders slower than the SLA.}
+      - {name: active_customers, data_type: bigint, description: Distinct customers who ordered.}
+
+  - name: mart_restaurant_performance
+    description: Lifetime performance per restaurant, ranked by GMV within its city.
+    columns:
+      - name: restaurant_id
+        description: Restaurant identifier.
+        data_tests: [unique, not_null]
+      - {name: gmv, description: Delivered order value (INR).}
+      - {name: aov, description: GMV / delivered orders.}
+      - {name: cancel_rate, description: Cancelled / all orders.}
+      - {name: p90_delivery_min, description: 90th percentile delivery time (minutes).}
+      - {name: sla_breach_rate, description: Share of delivered orders slower than the SLA.}
+      - {name: reviews, description: Reviews attributed to the restaurant via their order.}
+      - {name: gmv_rank_in_city, description: 1 = highest GMV in its city.}
+
+  - name: mart_delivery_sla
+    description: Delivery time p50/p90 and SLA breach rate by city and hour of day.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [city, order_hour]}
+    columns:
+      - {name: p50_delivery_min, description: Median delivery time (minutes).}
+      - {name: p90_delivery_min, description: 90th percentile delivery time (minutes).}
+      - {name: sla_breaches, description: Delivered orders slower than `delivery_sla_minutes`.}
+      - name: sla_breach_rate
+        description: sla_breaches / delivered orders.
+        data_tests:
+          - dbt_utils.accepted_range: {arguments: {min_value: 0, max_value: 1}}
+
+  - name: mart_review_insights
+    description: Review volume and rating-based sentiment per city and month.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [city, review_month]}
+    columns:
+      - {name: negative_share, description: Share of 1-2 star reviews.}
+      - {name: positive_share, description: Share of 4-5 star reviews.}
+      - {name: reviews_before_order, description: Reviews dated before their order (data issue).}
+      - {name: reviews_on_undelivered, description: Reviews on cancelled or refunded orders.}

@@ -1,0 +1,10 @@
+# Credentials never live here: every value comes from an environment variable.
+# `zap dbt ...` sets DUCKDB_PATH for the selected dataset. Snowflake is added in M5.
+zomato:
+  target: "{{ env_var('DBT_TARGET', 'duckdb') }}"
+  outputs:
+    duckdb:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', 'zomato.duckdb') }}"
+      schema: main
+      threads: 4

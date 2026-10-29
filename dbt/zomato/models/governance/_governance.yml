@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: dq_results
+    description: >-
+      The data-quality report. One row per rule per build: records checked, records that
+      failed, failure percentage, severity and the action taken.
+    columns:
+      - name: rule_id
+        description: Rule identifier from seeds/dq_rules.csv.
+        data_tests: [unique, not_null]
+      - {name: table_name, description: Source table the rule checks.}
+      - {name: rows_checked, description: Rows in the source table this build.}
+      - {name: rows_failed, description: Records that broke the rule.}
+      - {name: failed_pct, description: rows_failed / rows_checked x 100.}
+      - {name: severity, description: "error, warn or info."}
+      - {name: action, description: "quarantine, drop_copies, fix, or flag."}
+
+  - name: dq_quarantine
+    description: Records held back from the facts (action = quarantine), with the reason.
+    columns:
+      - {name: table_name, description: Source table.}
+      - {name: record_key, description: Primary key of the held-back record.}
+      - {name: rule_id, description: Rule that was broken.}
+      - {name: detail, description: Human-readable evidence.}

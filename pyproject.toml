@@ -18,6 +18,14 @@ dependencies = [
 zap = "zap.cli:app"
 
 [dependency-groups]
+app = [
+    "plotly>=5.24",
+    "streamlit>=1.40",
+]
+dbt = [
+    "dbt-core>=1.12.6",
+    "dbt-duckdb>=1.11.1",
+]
 dev = [
     "mypy>=1.11",
     "pandas-stubs>=2.2",
@@ -27,10 +35,17 @@ dev = [
     "ruff>=0.6",
     "types-pyyaml>=6",
 ]
+quality = [
+    "great-expectations>=1.3",
+]
 
 [build-system]
 requires = ["uv_build>=0.9,<0.10"]
 build-backend = "uv_build"
+
+[tool.uv]
+# Every group is installed by default, so `uv run` never silently drops dbt or GX.
+default-groups = ["dev", "dbt", "quality", "app"]
 
 [tool.uv.build-backend]
 module-name = "zap"
@@ -54,7 +69,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["pyarrow.*", "duckdb.*"]
+module = ["pyarrow.*", "duckdb.*", "plotly.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

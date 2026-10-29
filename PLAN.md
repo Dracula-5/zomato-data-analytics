@@ -356,7 +356,7 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 
 - [x] M0 Scaffold & tooling
 - [x] M1 Ingest, lake, contracts, drift, sample (users, menu, order_items pending D1)
-- [ ] M2 dbt (DuckDB), governance, GX, benchmarks
+- [x] M2 dbt (DuckDB), governance, GX, benchmarks
 - [ ] M3 Streamlit dashboard
 - [ ] M4 Airflow (local)
 - [ ] M5 Cloud: Terraform, S3, Snowflake

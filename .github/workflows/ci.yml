@@ -36,6 +36,9 @@ jobs:
       - name: Lint, type check, tests with 80% coverage gate
         run: make check
 
+      - name: Whole pipeline + dbt build on the SYNTHETIC fixture
+        run: make demo
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4

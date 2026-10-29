@@ -1,0 +1,18 @@
+version: 2
+
+seeds:
+  - name: dq_rules
+    description: >-
+      Catalogue of data-quality rules: what each checks, its severity, and what the
+      pipeline does with failing records. Reviewed like code, so changes are versioned.
+    columns:
+      - name: rule_id
+        data_tests: [unique, not_null]
+      - name: severity
+        data_tests:
+          - accepted_values:
+              arguments: {values: [error, warn, info]}
+      - name: action
+        data_tests:
+          - accepted_values:
+              arguments: {values: [quarantine, drop_copies, fix, flag]}

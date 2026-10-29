@@ -1,17 +1,26 @@
 """`zap` command-line interface. The Makefile is a thin wrapper around these commands."""
 
+import json
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
 import duckdb
 import typer
 
+from zap.bench import bench_incremental, bench_queries, write_bench
 from zap.config import get_settings
+from zap.dbt_runner import run_dbt
+from zap.dbt_sources import write_sources
+from zap.docs_dictionary import write_dictionary
 from zap.fixtures import FixtureSpec, generate_fixture
 from zap.ingest import sample
 from zap.ingest.contracts import load_contracts
 from zap.ingest.drift import append_drift_log, check_drift
 from zap.ingest.lake import DriftError, ingest, new_run_id, write_manifest
+from zap.pipeline import PipelineError, run_local
+from zap.quality.gx_suite import validate_lake, write_gx_report
+from zap.warehouse.duckdb_loader import load_raw, write_load_log
 
 app = typer.Typer(help="Zomato AI Data Platform CLI.", no_args_is_help=True)
 
@@ -105,6 +114,142 @@ def ingest_cmd(
         )
     typer.echo(f"  total {manifest.rows_written:,} rows, {manifest.bytes_written / 1e6:.1f} MB")
     typer.echo(f"Manifest: {path}")
+
+
+DatasetOpt = Annotated[
+    str | None, typer.Option(help="Dataset label (default: from SAMPLE_PCT, e.g. sample_5pct).")
+]
+
+
+def _dataset(dataset: str | None) -> str:
+    return dataset or sample.label(get_settings().sample_pct)
+
+
+@app.command("gen-dbt-sources")
+def gen_dbt_sources() -> None:
+    """Regenerate the dbt sources YAML from the schema contracts."""
+    settings = get_settings()
+    path = settings.dbt_project_dir / "models" / "staging" / "_sources.yml"
+    changed = write_sources(load_contracts(settings.contracts_dir), path)
+    typer.echo(f"{'Updated' if changed else 'Unchanged'}: {path}")
+
+
+@app.command("load")
+def load_cmd(
+    dataset: DatasetOpt = None,
+    lake: Annotated[
+        Path | None, typer.Option(help="Lake root (default: LAKE_DIR/<dataset>).")
+    ] = None,
+    day: Annotated[
+        datetime | None, typer.Option("--date", formats=["%Y-%m-%d"], help="Load one partition.")
+    ] = None,
+    table: TablesOpt = None,
+) -> None:
+    """Load the lake into the DuckDB warehouse `raw` schema (full, or one day's partition)."""
+    settings = get_settings()
+    label = _dataset(dataset)
+    result = load_raw(
+        load_contracts(settings.contracts_dir),
+        lake or settings.lake_dir / label,
+        settings.duckdb_path(label),
+        tables=table,
+        partition_date=day.date() if day else None,
+    )
+    write_load_log(result, settings.artifacts_dir, label)
+    typer.echo(f"Loaded {result.rows:,} rows into {result.database} in {result.seconds:.1f}s")
+    for t in result.tables:
+        typer.echo(f"  {t.table:<12} {t.mode:<10} {t.rows:>12,} rows {t.seconds:>7.1f}s")
+
+
+@app.command("dbt", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def dbt_cmd(ctx: typer.Context, dataset: DatasetOpt = None) -> None:
+    """Run dbt against a dataset's warehouse, e.g. `zap dbt --dataset fixture build`."""
+    settings = get_settings()
+    run = run_dbt(ctx.args, settings.duckdb_path(_dataset(dataset)), settings.dbt_project_dir)
+    typer.echo(f"dbt {' '.join(ctx.args)} finished in {run.seconds:.1f}s (exit {run.returncode})")
+    raise typer.Exit(code=run.returncode)
+
+
+@app.command("gx")
+def gx_cmd(
+    dataset: DatasetOpt = None,
+    day: Annotated[
+        datetime | None, typer.Option("--date", formats=["%Y-%m-%d"], help="One partition only.")
+    ] = None,
+) -> None:
+    """Run the Great Expectations gate on a dataset's lake. Exits 1 if the gate fails."""
+    settings = get_settings()
+    label = _dataset(dataset)
+    report = validate_lake(
+        load_contracts(settings.contracts_dir),
+        settings.lake_dir / label,
+        label,
+        partition_date=day.date() if day else None,
+    )
+    path = write_gx_report(report, settings.artifacts_dir)
+    typer.echo(
+        f"GX: {len(report.results)} expectations, {len(report.failed)} failed, "
+        f"gate {'PASSED' if report.gate_passed else 'FAILED'} ({report.seconds:.1f}s) -> {path}"
+    )
+    for r in report.failed:
+        typer.echo(f"  [{r.severity}] {r.table}.{r.column} {r.expectation}: {r.unexpected_count}")
+    if not report.gate_passed:
+        raise typer.Exit(code=1)
+
+
+@app.command("data-dictionary")
+def data_dictionary_cmd(
+    out: Annotated[Path, typer.Option(help="Output Markdown file.")] = Path(
+        "docs/DATA_DICTIONARY.md"
+    ),
+) -> None:
+    """Write the data dictionary from the last `dbt docs generate` and the contracts."""
+    settings = get_settings()
+    path = write_dictionary(settings.dbt_project_dir, load_contracts(settings.contracts_dir), out)
+    typer.echo(f"Data dictionary written to {path}")
+
+
+@app.command("bench")
+def bench_cmd(
+    which: Annotated[str, typer.Argument(help="incremental | query | all")] = "all",
+    dataset: DatasetOpt = None,
+) -> None:
+    """Benchmark full-refresh vs incremental dbt runs, and fact scan vs aggregate mart."""
+    settings = get_settings()
+    label = _dataset(dataset)
+    db_path = settings.duckdb_path(label)
+    results = []
+    if which in ("incremental", "all"):
+        results.append(bench_incremental(db_path, settings.dbt_project_dir))
+    if which in ("query", "all"):
+        results.append(bench_queries(db_path))
+    for result in results:
+        path = write_bench(result, settings.artifacts_dir, label)
+        typer.echo(json.dumps(result, indent=2))
+        typer.echo(f"-> {path}")
+
+
+@app.command("local")
+def local_cmd(
+    source: SourceOpt = None,
+    sample_pct: Annotated[
+        float | None, typer.Option(min=0.01, max=100, help="Sample %% (default: SAMPLE_PCT).")
+    ] = None,
+    dataset: DatasetOpt = None,
+    docs: Annotated[bool, typer.Option(help="Also run `dbt docs generate`.")] = True,
+) -> None:
+    """Run the whole local pipeline: ingest, GX gate, load, dbt build, quality report."""
+    settings = get_settings()
+    pct = settings.sample_pct if sample_pct is None else sample_pct
+    label = dataset or sample.label(pct)
+    try:
+        run = run_local(
+            settings, source or settings.data_dir, label, pct, docs=docs, echo=typer.echo
+        )
+    except (PipelineError, DriftError) as err:
+        typer.echo(f"PIPELINE FAILED: {err}", err=True)
+        raise typer.Exit(code=1) from err
+    typer.echo(f"Pipeline '{label}' finished in {run.seconds:.1f}s")
 
 
 if __name__ == "__main__":  # pragma: no cover

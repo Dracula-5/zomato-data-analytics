@@ -15,6 +15,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Target = Literal["duckdb", "snowflake"]
 
+# The repo checkout (src/zap/config.py -> repo root). Contracts and the dbt project live
+# here, so commands work from any working directory.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
     """Runtime settings. Field `data_dir` is read from env var `DATA_DIR`, and so on."""
@@ -26,7 +30,10 @@ class Settings(BaseSettings):
     lake_dir: Path = Field(default=Path("lake"), description="Local stand-in for the S3 lake")
     warehouse_dir: Path = Field(default=Path("warehouse"), description="DuckDB files")
     artifacts_dir: Path = Field(default=Path("artifacts"), description="Run outputs and metrics")
-    contracts_dir: Path = Field(default=Path("contracts"), description="Schema contract YAMLs")
+    contracts_dir: Path = Field(
+        default=REPO_ROOT / "contracts", description="Schema contract YAMLs"
+    )
+    dbt_project_dir: Path = Field(default=REPO_ROOT / "dbt" / "zomato", description="dbt project")
 
     # How to run
     target: Target = "duckdb"
@@ -36,6 +43,10 @@ class Settings(BaseSettings):
     s3_bucket: str | None = None
     aws_region: str = "ap-south-1"
     openai_api_key: SecretStr | None = None
+
+    def duckdb_path(self, dataset: str) -> Path:
+        """Warehouse file for a dataset label, e.g. `warehouse/sample_5pct.duckdb`."""
+        return self.warehouse_dir / f"{dataset}.duckdb"
 
     def redacted(self) -> dict[str, str]:
         """Settings as display strings, with secrets masked."""

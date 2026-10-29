@@ -223,3 +223,161 @@ Dimensions are kept whole in the sample, which is why it holds 1.0M rows, not 5%
   contract columns by name.
 - A docstring containing `"""` ended the docstring early. Small bug, but a reminder that
   tests run on every change for a reason.
+
+---
+
+## M2: The warehouse, dbt, data quality and governance
+
+### The layers (medallion architecture)
+
+```
+raw (bronze)        staging (silver)            marts (gold)                   governance
+-------------       -----------------           ----------------------         -------------
+7 source tables --> 7 cleaned views --+------> dims + incremental facts --> dq_results
+as delivered        typed, renamed,   |         business marts               dq_quarantine
+                    de-duplicated     +> int_dq_violations (every rule) --> gx_results,
+                                                                            dbt_test_results
+snapshots: snap_restaurants (SCD2 history)
+```
+
+- **raw**: exactly what arrived (loaded from the lake). Never edited.
+- **staging**: one view per source. It cleans and types the data and renames columns
+  (`r_id` becomes `restaurant_id`), and that's all: no joins, no business logic.
+- **marts**: what people query. Dimensions (who, what, where), facts (events) and business
+  marts (pre-aggregated answers).
+- **governance**: data about the data, meaning which records broke which rule.
+
+### Why dbt?
+
+dbt turns SQL `select` statements into tables and views, in dependency order (`ref()`
+builds the lineage graph), with tests and docs alongside. Transformations become version
+controlled, testable and documented, like application code.
+
+### Dimensions, facts and natural keys
+
+- **Facts** are events: `fct_orders` has one row per order with measures such as amount
+  and delivery time. **Dimensions** describe the who, what and where: restaurants,
+  customers, food, dates, cities.
+- This project uses **natural keys** (the source's `restaurant_id`) instead of surrogate
+  keys. The source ids are stable and unique, and that keeps the SQL readable. With
+  multiple source systems you would add surrogate keys.
+
+### Incremental facts with MERGE and a lookback window
+
+On each run, `fct_orders` reprocesses only the last `lookback_days` (3) of order dates and
+**MERGEs** them on `order_id`: matching rows are updated and new rows inserted.
+
+- **Why a lookback window?** Orders from yesterday can arrive late or be corrected today.
+  The reference repo used `order_timestamp > max(...)`, which silently misses them.
+- **What I measured:** the first version saved only **2.3%** on the fact models. Two
+  things prevented DuckDB from skipping old data:
+  1. The staging de-duplication window was `partition by order_id`. A date filter can't be
+     pushed below a window unless it filters on a partition column, so I changed it to
+     `partition by order_date, order_id`. Exact duplicates share a date, so the result is
+     the same.
+  2. The cutoff was a scalar subquery (`select max(order_date) from this`). The optimiser
+     treats that as unknown until runtime. The `incremental_cutoff` macro computes it when
+     the model compiles, so the SQL contains a literal date.
+- **After the fix** (median of 3 runs, full 10M rows, one new day added): fact models went
+  from 7.56 s to 1.53 s (**79.7% saved**); the whole project from 17.36 s to 12.51 s
+  (**28.0%**). The project figure is lower because the marts and the 23 quality rules are
+  still rebuilt in full every run. The benchmark also checks that the incremental result
+  has exactly the rows a full refresh would.
+
+*Interview line:* "My first incremental model wasn't really incremental. The benchmark
+showed 2% savings, I traced it to predicate pushdown being blocked, fixed it, and it went
+to 80%. Always measure: 'incremental' in the config doesn't mean incremental in practice."
+
+### SCD Type 2 snapshot
+
+`snap_restaurants` keeps history. When a restaurant's rating, cost, name, cuisines or
+location changes, dbt closes the old row (`dbt_valid_to` set) and opens a new current row.
+Analysts can then see what a restaurant looked like when an order was placed.
+`dim_restaurant` exposes only the current rows.
+
+The source data is static, so there are no real changes to observe. A test simulates one:
+it edits two ratings in a copy of the warehouse, re-runs `dbt snapshot`, and checks that
+exactly two rows were closed and two new current rows opened.
+
+### Data quality, three layers deep
+
+| Layer | Tool | Runs | Checks |
+|---|---|---|---|
+| 1. Schema gate | contracts + drift check | at ingestion | columns and types (M1) |
+| 2. Value gate | Great Expectations | before loading | each file: keys, allowed values, ranges |
+| 3. Warehouse | dbt tests + rule catalogue | after the build | relationships, reconciliation, business rules |
+
+- **Severity.** A failed `error` stops the pipeline (unknown order status, negative
+  money). A failed `warn` is logged and the pipeline continues (duplicates, which staging
+  removes and the rules count).
+- **Rule catalogue** (`seeds/dq_rules.csv`): 23 rules, each with a severity and an action.
+  - `quarantine`: excluded from facts, kept in `dq_quarantine` with the reason.
+  - `fix`: corrected by a documented rule. Example: reviews whose restaurant disagrees
+    with their order take the order's restaurant.
+  - `flag`: kept, marked and counted.
+- **Reconciliation tests:** every source order is in the fact table or in quarantine
+  (nothing lost, nothing invented), and GMV is identical whether computed from the fact,
+  the city mart or the national mart.
+- **dbt unit tests** check SQL logic on hand-made input rows: `1,200` with a rupee sign
+  becomes 1200, `Sector 5,Salt Lake,Kolkata` becomes city Kolkata, an email becomes
+  `r***@example.com`.
+
+**What it caught on the real data (full 10M orders, 2026-10-30):** 9 of 23 rules fired,
+flagging 885,016 records. Every review points at a different restaurant than its order
+(300,000) and almost every one at a different user (299,998); 172,401 reviews are dated
+before their order; 25,380 are on cancelled or refunded orders. No records were
+quarantined: the order facts themselves are internally consistent.
+
+### PII governance
+
+- Each source column is classified in its contract (`public`, `internal`, `pii`, `secret`).
+- The plain-text **password** (`secret`) is never selected in staging, so no model can
+  ever expose it. A test scans every schema to prove it.
+- **Emails** reach the marts only masked (`r***@example.com`) and as a **salted SHA-256
+  hash**, which still works as a join key. The salt (`PII_HASH_SALT`) stops anyone hashing
+  a list of known emails and matching them.
+- A test scans every text column in the marts for a raw email and must find none.
+
+### Model contracts
+
+`mart_city_daily` and `mart_daily_kpis` have **enforced contracts**: dbt refuses to build
+them unless the column names and types match the YAML. That's a promise to the dashboard
+and the forecasting code that the shape won't change silently.
+
+### Source freshness
+
+Freshness is checked on `_loaded_at` (ingestion time): warn after 26 hours, error after 50.
+Business dates in this static dataset end in June 2026, so a freshness check on
+`order_date` would always fail and tell you nothing.
+
+### Aggregate marts: are they worth it?
+
+The same question answered from the 10M-row fact table and from the pre-aggregated mart
+(median of 7 runs, answers verified identical):
+
+| Question | Fact table | Mart | Speed-up |
+|---|---|---|---|
+| GMV by city, last 30 days | 75.6 ms | 39.1 ms | 1.9x |
+| National GMV by month | 70.6 ms | 7.0 ms | 10.1x |
+
+DuckDB is already fast on 10M rows, so the absolute gains are small locally. The point
+of a mart is that a dashboard reads a few thousand rows instead of millions, which matters
+more as data grows and on a warehouse that bills per second of compute (Snowflake, M5).
+
+### Portability (DuckDB today, Snowflake in M5)
+
+Where the SQL differs, a macro uses `adapter.dispatch`. For example, `regexp_replace` needs
+a `'g'` flag in DuckDB but not in Snowflake, and the last element of a split string is
+`string_split(x, ',')[-1]` in DuckDB but `split_part(x, ',', -1)` in Snowflake. The models
+themselves stay the same.
+
+### Gotchas met in M2
+
+- **GX + DuckDB 2.0:** Great Expectations' SQL engine failed (`list index out of range`)
+  through the duckdb-engine SQLAlchemy driver. Instead, DuckDB reads only the needed
+  columns into pandas and GX validates that. It's fast enough for the 5% sample (6.5 s)
+  and for a single daily partition.
+- **`uv remove` re-synced only the default dependency group** and uninstalled dbt and GX.
+  Fixed by making every group a default in `pyproject.toml`.
+- **dbt start-up on Windows** costs about 20-30 s per invocation, which is why wall times
+  are much longer than dbt's own `elapsed_time`. Benchmarks report both.

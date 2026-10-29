@@ -10,7 +10,7 @@ export PYTHONUTF8 := 1
 SAMPLE_PCT ?= 5
 
 .PHONY: help setup lint format typecheck test check hooks fixtures info \
-        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve bench
+        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve bench app
 
 help: ## Show this list
 	@$(RUN) python scripts/make_help.py $(firstword $(MAKEFILE_LIST))
@@ -75,3 +75,6 @@ docs-serve: ## Browse the dbt docs site (lineage graph) at http://localhost:8081
 
 bench: ## Benchmarks on the full dataset: incremental vs full refresh, fact vs mart query
 	$(RUN) zap bench all --dataset full
+
+app: ## Open the Streamlit dashboard at http://localhost:8501
+	$(RUN) streamlit run app/Home.py

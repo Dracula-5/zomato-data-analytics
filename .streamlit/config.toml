@@ -1,0 +1,10 @@
+# Bind to this machine only: the dashboard is not meant to be reachable from the network.
+[server]
+address = "localhost"
+port = 8501
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+font = "sans serif"

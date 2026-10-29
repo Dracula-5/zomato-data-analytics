@@ -4,10 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from helpers import CONTRACTS_DIR
-from zap.config import get_settings
+from helpers import CONTRACTS_DIR, make_settings
+from zap.config import Settings, get_settings
 from zap.fixtures import FixtureResult, FixtureSpec, generate_fixture
 from zap.ingest.contracts import Contract, load_contracts
+from zap.pipeline import PipelineRun, run_local
 
 
 @pytest.fixture(autouse=True)
@@ -49,3 +50,12 @@ def source_copy(fixture_data: tuple[Path, FixtureResult], tmp_path: Path) -> Pat
     dest = tmp_path / "source"
     shutil.copytree(fixture_data[0], dest)
     return dest
+
+
+@pytest.fixture(scope="session")
+def pipeline(
+    fixture_data: tuple[Path, FixtureResult], tmp_path_factory: pytest.TempPathFactory
+) -> tuple[Settings, PipelineRun, FixtureResult]:
+    settings = make_settings(tmp_path_factory.mktemp("pipeline"))
+    run = run_local(settings, fixture_data[0], "fixture", 100.0, docs=True, echo=lambda _: None)
+    return settings, run, fixture_data[1]

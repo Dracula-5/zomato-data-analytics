@@ -9,7 +9,7 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from helpers import CONTRACTS_DIR, rewrite_csv
+from helpers import CONTRACTS_DIR, make_settings, rewrite_csv
 from zap.bench import bench_incremental, bench_queries
 from zap.config import Settings
 from zap.dbt_runner import run_dbt
@@ -28,24 +28,6 @@ DEFECT_RULES = {
     "review_on_undelivered": "REV_ON_UNDELIVERED",
     "null_veg_flag": "FOOD_INVALID_VEG_FLAG",
 }
-
-
-def _settings(root: Path) -> Settings:
-    return Settings(
-        lake_dir=root / "lake",
-        warehouse_dir=root / "warehouse",
-        artifacts_dir=root / "artifacts",
-        contracts_dir=CONTRACTS_DIR,
-    )
-
-
-@pytest.fixture(scope="session")
-def pipeline(
-    fixture_data: tuple[Path, FixtureResult], tmp_path_factory: pytest.TempPathFactory
-) -> tuple[Settings, PipelineRun, FixtureResult]:
-    settings = _settings(tmp_path_factory.mktemp("pipeline"))
-    run = run_local(settings, fixture_data[0], "fixture", 100.0, docs=True, echo=lambda _: None)
-    return settings, run, fixture_data[1]
 
 
 def _sql(settings: Settings, sql: str) -> list[tuple[object, ...]]:
@@ -209,7 +191,7 @@ def test_gate_failure_stops_before_load(
         return rows
 
     rewrite_csv(source / "orders.csv", corrupt)
-    settings = _settings(tmp_path)
+    settings = make_settings(tmp_path)
     with pytest.raises(PipelineError, match="order_status"):
         run_local(settings, source, "bad", 100.0, docs=False, echo=lambda _: None)
     assert not settings.duckdb_path("bad").exists()

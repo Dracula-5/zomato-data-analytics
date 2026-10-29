@@ -381,3 +381,56 @@ themselves stay the same.
   Fixed by making every group a default in `pyproject.toml`.
 - **dbt start-up on Windows** costs about 20-30 s per invocation, which is why wall times
   are much longer than dbt's own `elapsed_time`. Benchmarks report both.
+
+---
+
+## M3: The Streamlit dashboard
+
+### Structure: thin pages, testable data layer
+
+```
+app/Home.py, app/pages/*.py      what to draw (thin; no SQL)
+src/zap/dashboard/data.py        every query, as plain functions returning DataFrames
+src/zap/dashboard/theme.py       palette + one `style()` for every chart
+src/zap/dashboard/ui.py          dataset picker, caching, "show as table"
+```
+
+Keeping SQL out of the page files means each query can be unit-tested against the fixture
+warehouse. Every page is also smoke-tested headlessly with Streamlit's `AppTest`, which
+runs the page script in-process and fails on any exception.
+
+### Reading DuckDB safely from a dashboard
+
+- **Read-only, short-lived connections.** DuckDB allows one writing *process* at a time. If
+  the dashboard held a connection open, a `dbt build` would fail to get its lock. So each
+  query opens a read-only connection and closes it straight away.
+- **Caching that knows when data changed.** Results are cached with `st.cache_data`, and
+  the cache key includes the warehouse file's modification time, so a rebuild invalidates
+  it automatically.
+- **Replacement scans off.** If a table is missing, DuckDB would otherwise look for a Python
+  variable with that name in the calling code (`gx_results` matched a *function*). Turning
+  this off means a missing table is a clear "not found" error, and queries can never read
+  a Python object by accident.
+
+### Chart design choices (and why)
+
+- **One job per colour.** Each chart uses a single series colour. The heatmaps use one
+  blue ramp (light means few, dark means many). There is no rainbow, because hue doesn't
+  read as "more".
+- **No dual axes.** Orders and GMV sit in two side-by-side charts. Two y-scales on one chart
+  invite false conclusions about where the lines cross.
+- **Validated palette.** The colours come from a palette checked for colour-blind
+  separation and contrast in light and dark mode. One light-mode colour is below 3:1
+  contrast, so every chart has a "show the data as a table" view. That is also an
+  accessibility feature for screen readers.
+- **Hover tooltips** carry exact, formatted values (₹ amounts, percentages), so the chart
+  stays clean.
+- **Honest captions.** The Delivery SLA page prints the actual spread across all city-hour
+  cells and states that this synthetic dataset has no SLA hot-spot. A dashboard that
+  quietly shows a flat heatmap invites someone to invent a story.
+
+### Security
+
+By default Streamlit listens on every network interface: the first run printed an
+"External URL" with the machine's public IP. `.streamlit/config.toml` binds it to
+`localhost` and turns off usage telemetry.

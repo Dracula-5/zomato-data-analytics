@@ -6,6 +6,8 @@ from pathlib import Path
 
 import duckdb
 
+from zap.config import Settings
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS_DIR = REPO_ROOT / "contracts"
 
@@ -39,3 +41,13 @@ def parquet(path: Path) -> str:
     """`read_parquet(...)` SQL for a lake table folder (dimension or partitioned fact)."""
     pattern = "*/*.parquet" if any(p.is_dir() for p in path.iterdir()) else "*.parquet"
     return f"read_parquet('{(path / pattern).as_posix()}', hive_partitioning=false)"
+
+
+def make_settings(root: Path) -> Settings:
+    """Settings whose lake, warehouse and artifacts live under `root` (a temp folder)."""
+    return Settings(
+        lake_dir=root / "lake",
+        warehouse_dir=root / "warehouse",
+        artifacts_dir=root / "artifacts",
+        contracts_dir=CONTRACTS_DIR,
+    )

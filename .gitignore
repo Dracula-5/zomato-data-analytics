@@ -9,12 +9,14 @@ __pycache__/
 .coverage.*
 htmlcov/
 
-# Data and run outputs: never committed (the dataset is private and large)
-data/
-lake/
-warehouse/
-artifacts/
-.cache/
+# Data and run outputs: never committed (the dataset is private and large).
+# Anchored with a leading "/" so they match only the top-level folders, not e.g.
+# src/zap/warehouse/ (an unanchored "warehouse/" once hid that package from git).
+/data/
+/lake/
+/warehouse/
+/artifacts/
+/.cache/
 *.duckdb
 *.duckdb.wal
 *.parquet

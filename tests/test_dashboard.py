@@ -60,7 +60,7 @@ def test_city_and_restaurant_views(db: Path) -> None:
 def test_sla_and_quality_views(db: Path) -> None:
     sla = data.delivery_sla(db, 3)
     assert sla["city"].nunique() <= 3 and sla["order_hour"].between(0, 23).all()
-    assert len(data.dq_results(db)) == 23
+    assert len(data.dq_results(db)) == 26
     tests = data.dbt_test_summary(db)
     assert int(tests["tests"].sum()) > 50
     assert set(tests["status"]) == {"pass"}

@@ -7,7 +7,8 @@ ORD_ORPHAN_CUSTOMER,orders,Customer id not found in users (checked only when use
 ORD_DELIVERED_NO_TIME,orders,Delivered order without a delivery time,warn,flag
 ORD_SUBTOTAL_MISMATCH,orders,Order subtotal differs from the sum of its line amounts,warn,flag
 ITM_ORPHAN_ORDER,order_items,Order line whose order does not exist,error,quarantine
-ITM_LINE_AMOUNT_MISMATCH,order_items,line_amount differs from price x quantity,error,quarantine
+ITM_LINE_AMOUNT_MISMATCH,order_items,line_amount differs from price x quantity by more than 1 INR per unit (beyond rounding),error,quarantine
+ITM_PRICE_ROUNDED,order_items,line_amount exceeds price x quantity by up to 1 INR per unit: price is a rounded display value,info,flag
 REV_ORPHAN_ORDER,reviews,Review whose order does not exist,error,quarantine
 REV_RESTAURANT_MISMATCH,reviews,Recorded restaurant differs from the order's restaurant; the order wins,warn,fix
 REV_USER_MISMATCH,reviews,Recorded reviewer differs from the order's customer; the order wins,warn,fix
@@ -20,5 +21,7 @@ FOOD_INVALID_VEG_FLAG,food,veg_or_non_veg is not Veg or Non-veg,warn,flag
 FOOD_MISSING_NAME,food,Food item has no name,warn,flag
 MENU_ORPHAN_RESTAURANT,menu,Menu line for a restaurant that does not exist,error,quarantine
 MENU_ORPHAN_FOOD,menu,Menu line for a food item that does not exist,error,quarantine
-MENU_UNPARSEABLE_PRICE,menu,Menu price is not a number,warn,flag
+MENU_UNPARSEABLE_PRICE,menu,Menu price is not a number (e.g. cost-for-two text),warn,flag
+MENU_DUPLICATE_ITEM,menu,Same food item listed more than once by the same restaurant (extra listings),warn,flag
 USR_INVALID_EMAIL,users,Email address is missing or malformed,warn,flag
+USR_DUPLICATE_EMAIL,users,Email address shared with another user (extra accounts),warn,flag

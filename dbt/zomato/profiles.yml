@@ -8,3 +8,7 @@ zomato:
       path: "{{ env_var('DUCKDB_PATH', 'zomato.duckdb') }}"
       schema: main
       threads: 4
+      # Bounded memory: past the limit DuckDB spills to <db file>.tmp instead of failing.
+      settings:
+        memory_limit: "{{ env_var('DUCKDB_MEMORY_LIMIT', '6GB') }}"
+        preserve_insertion_order: false

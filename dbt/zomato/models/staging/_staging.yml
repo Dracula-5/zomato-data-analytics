@@ -31,10 +31,15 @@ models:
         description: True for Veg, false for Non-veg, null when the source flag is invalid.
 
   - name: stg_menu
-    description: Restaurant x food menu lines with a numeric price.
+    description: >-
+      Restaurant x food menu lines with a numeric price. menu_id alone is not unique in the
+      source; (menu_id, food_id) is.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [menu_id, food_id]}
     columns:
       - name: menu_id
-        data_tests: [unique, not_null]
+        data_tests: [not_null]
 
   - name: stg_users
     description: Registered users. The plain-text password is never selected.

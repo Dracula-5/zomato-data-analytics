@@ -1,14 +1,14 @@
-# Column names follow the reference repo's RAW DDL. When the real menu.csv arrives,
-# `zap drift-check` compares its header against this file and flags any difference.
+# Header matches the real file. Profiling (2026-10-30) showed menu_id is NOT unique on its
+# own: 1,179,936 rows but 1,048,575 distinct menu_ids, so the key is (menu_id, f_id).
 table: menu
 file: menu.csv
 kind: dimension
 description: Which restaurant sells which food item, and at what price (restaurant x food bridge).
 has_index_column: true
-primary_key: [menu_id]
+primary_key: [menu_id, f_id]
 columns:
   - name: menu_id
-    description: Menu line identifier.
+    description: Menu identifier; repeats across lines, unique together with f_id.
   - name: r_id
     description: Restaurant identifier (references restaurant.id).
   - name: f_id
@@ -17,5 +17,5 @@ columns:
     description: Cuisine the item is listed under at this restaurant.
     classification: public
   - name: price
-    description: Listed price of the item in INR, as text.
+    description: Listed price in INR as text; a few rows hold cost-for-two text such as "₹200 FOR TWO".
     classification: public

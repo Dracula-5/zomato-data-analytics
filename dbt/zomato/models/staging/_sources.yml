@@ -42,9 +42,10 @@ sources:
       kind: dimension
       primary_key:
       - menu_id
+      - f_id
     columns:
     - name: menu_id
-      description: Menu line identifier.
+      description: Menu identifier; repeats across lines, unique together with f_id.
       data_type: VARCHAR
       meta:
         classification: internal
@@ -64,7 +65,7 @@ sources:
       meta:
         classification: public
     - name: price
-      description: Listed price of the item in INR, as text.
+      description: Listed price in INR as text; a few rows hold cost-for-two text such as "₹200 FOR TWO".
       data_type: VARCHAR
       meta:
         classification: public
@@ -174,37 +175,37 @@ sources:
       data_type: VARCHAR
       meta:
         classification: secret
-    - name: age
+    - name: Age
       description: Customer age in years.
       data_type: VARCHAR
       meta:
         classification: internal
-    - name: gender
+    - name: Gender
       description: Self-reported gender.
       data_type: VARCHAR
       meta:
         classification: pii
-    - name: marital_status
+    - name: Marital Status
       description: Self-reported marital status.
       data_type: VARCHAR
       meta:
         classification: pii
-    - name: occupation
+    - name: Occupation
       description: Occupation category, e.g. "Student" or "Employee".
       data_type: VARCHAR
       meta:
         classification: internal
-    - name: monthly_income
+    - name: Monthly Income
       description: Monthly income bracket as text.
       data_type: VARCHAR
       meta:
         classification: pii
-    - name: education
+    - name: Educational Qualifications
       description: Highest educational qualification.
       data_type: VARCHAR
       meta:
         classification: internal
-    - name: family_size
+    - name: Family size
       description: Number of people in the household.
       data_type: VARCHAR
       meta:
@@ -364,7 +365,7 @@ sources:
       meta:
         classification: internal
     - name: price
-      description: Unit price charged (INR).
+      description: Unit price (INR), rounded down; line_amount is the exact value.
       data_type: DECIMAL(12,2)
       meta:
         classification: internal
@@ -374,7 +375,7 @@ sources:
       meta:
         classification: internal
     - name: line_amount
-      description: price x quantity (INR).
+      description: Exact line value (INR); can exceed price x quantity by rounding.
       data_type: DECIMAL(12,2)
       meta:
         classification: internal

@@ -108,7 +108,8 @@ def suite_specs() -> dict[str, list[Spec]]:
             ),
         ],
         "menu": [
-            ("ExpectColumnValuesToBeUnique", {"column": "menu_id"}, "warn"),
+            ("ExpectCompoundColumnsToBeUnique", {"column_list": ["menu_id", "f_id"]}, "warn"),
+            ("ExpectColumnValuesToNotBeNull", {"column": "r_id"}, "error"),
         ],
         "users": [
             ("ExpectColumnValuesToBeUnique", {"column": "user_id"}, "warn"),
@@ -150,6 +151,14 @@ class GxReport:
     def failed(self) -> list[ExpectationResult]:
         return [r for r in self.results if not r.success]
 
+    @classmethod
+    def from_json(cls, path: Path) -> GxReport:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        results = [ExpectationResult(**r) for r in data.pop("results")]
+        for derived in ("gate_passed", "expectations", "expectations_failed"):
+            data.pop(derived, None)
+        return cls(**data, results=results)
+
     def to_json(self) -> str:
         data = asdict(self)
         data["gate_passed"] = self.gate_passed
@@ -159,7 +168,9 @@ class GxReport:
 
 
 def _columns_needed(specs: list[Spec]) -> list[str]:
-    return sorted({str(kw["column"]) for _, kw, _ in specs if "column" in kw})
+    cols = {str(kw["column"]) for _, kw, _ in specs if "column" in kw}
+    cols |= {str(c) for _, kw, _ in specs for c in kw.get("column_list", [])}
+    return sorted(cols)
 
 
 def read_frame(
@@ -196,7 +207,7 @@ def validate_frame(table: str, frame: pd.DataFrame, specs: list[Spec]) -> list[E
             ExpectationResult(
                 table=table,
                 expectation=class_name,
-                column=kwargs.get("column"),
+                column=kwargs.get("column") or ",".join(kwargs.get("column_list", [])) or None,
                 severity=severity,
                 success=bool(outcome.success),
                 element_count=res.get("element_count", res.get("observed_value")),

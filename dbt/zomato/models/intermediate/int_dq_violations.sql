@@ -1,12 +1,16 @@
+{{ config(materialized='table') }}
 -- Every data-quality rule in seeds/dq_rules.csv, evaluated per record.
 -- One row = one record that broke one rule. Severity and action come from the seed.
+-- A TABLE, not a view: dq_quarantine and dq_results both read it, and as a view the 26
+-- rules over 33M rows ran twice, in parallel, and ran out of memory on the full data.
+-- The staging CTEs are materialized so each 10M/23M-row source is de-duplicated once.
 
-with orders as (select * from {{ ref('stg_orders') }}),
-items as (select * from {{ ref('stg_order_items') }}),
-reviews as (select * from {{ ref('stg_reviews') }}),
-restaurants as (select * from {{ ref('stg_restaurants') }}),
+with orders as {{ materialized_cte() }} (select * from {{ ref('stg_orders') }}),
+items as {{ materialized_cte() }} (select * from {{ ref('stg_order_items') }}),
+reviews as {{ materialized_cte() }} (select * from {{ ref('stg_reviews') }}),
+restaurants as {{ materialized_cte() }} (select * from {{ ref('stg_restaurants') }}),
 foods as (select * from {{ ref('stg_food') }}),
-menu as (select * from {{ ref('stg_menu') }}),
+menu as {{ materialized_cte() }} (select * from {{ ref('stg_menu') }}),
 users as (select * from {{ ref('stg_users') }}),
 
 item_totals as (
@@ -72,7 +76,14 @@ violations as (
     select 'ITM_LINE_AMOUNT_MISMATCH', cast(order_item_id as varchar),
            cast(line_amount as varchar) || ' vs ' || cast(price * quantity as varchar)
     from items
+    where abs(line_amount - price * quantity) > quantity
+
+    union all
+    select 'ITM_PRICE_ROUNDED', cast(order_item_id as varchar),
+           cast(line_amount as varchar) || ' vs ' || cast(price * quantity as varchar)
+    from items
     where line_amount <> price * quantity
+      and abs(line_amount - price * quantity) <= quantity
 
     union all
     select 'REV_ORPHAN_ORDER', cast(v.review_id as varchar), 'order ' || cast(v.order_id as varchar)
@@ -135,26 +146,39 @@ violations as (
     where food_name is null or food_name = ''
 
     union all
-    select 'MENU_ORPHAN_RESTAURANT', m.menu_id, 'restaurant ' || cast(m.restaurant_id as varchar)
+    select 'MENU_ORPHAN_RESTAURANT', m.menu_id || '/' || m.food_id,
+           'restaurant ' || cast(m.restaurant_id as varchar)
     from menu m
     left join restaurants r on m.restaurant_id = r.restaurant_id
     where r.restaurant_id is null
 
     union all
-    select 'MENU_ORPHAN_FOOD', m.menu_id, 'food ' || m.food_id
+    select 'MENU_ORPHAN_FOOD', m.menu_id || '/' || m.food_id, 'food ' || m.food_id
     from menu m
     left join foods f on m.food_id = f.food_id
     where f.food_id is null
 
     union all
-    select 'MENU_UNPARSEABLE_PRICE', menu_id, 'price is not a number'
+    select 'MENU_UNPARSEABLE_PRICE', menu_id || '/' || food_id, 'price is not a number'
     from menu
     where price is null
+
+    union all
+    select 'MENU_DUPLICATE_ITEM', menu_id || '/' || food_id,
+           'restaurant ' || cast(restaurant_id as varchar) || ' lists ' || food_id || ' again'
+    from menu
+    qualify row_number() over (partition by restaurant_id, food_id order by menu_id) > 1
 
     union all
     select 'USR_INVALID_EMAIL', cast(user_id as varchar), coalesce(email, 'null')
     from users
     where email is null or email not like '%_@_%._%'
+
+    union all
+    select 'USR_DUPLICATE_EMAIL', cast(user_id as varchar), 'email used by another user'
+    from users
+    where email is not null
+    qualify row_number() over (partition by email order by user_id) > 1
 )
 
 select

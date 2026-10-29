@@ -434,3 +434,45 @@ runs the page script in-process and fails on any exception.
 By default Streamlit listens on every network interface: the first run printed an
 "External URL" with the machine's public IP. `.streamlit/config.toml` binds it to
 `localhost` and turns off usage telemetry.
+
+---
+
+## M2b: When the last three files arrived (users, menu, order_items)
+
+This is a small case study in why the safeguards exist.
+
+1. **The drift gate blocked `users.csv`.** The contract had been written from the reference
+   repo's DDL (`age`, `marital_status`, ...), but the real file says `Age`, `Marital Status`,
+   `Educational Qualifications`. The check reported it as *breaking* and nothing was loaded.
+   The contract now matches the real file, and staging renames the columns to snake_case.
+   A positional `COPY INTO`, as in the reference, would have loaded it silently.
+2. **Profiling corrected a wrong assumption about the key.** `menu_id` looked like the key of
+   `menu.csv`, but there are 1,179,936 rows and only 1,048,575 distinct ids. That is exactly
+   Excel's row limit minus one, which suggests (not proven) that the file once went through
+   Excel. The real key is `(menu_id, f_id)`. A `unique` test on `menu_id` would have failed
+   for the wrong reason.
+3. **Root cause before quarantine.** 49,065 order lines have `line_amount` ≠
+   `price × quantity`. Quarantining them blindly would have thrown away valid data. The
+   differences are always ₹1–3, and every order's subtotal equals the sum of its line
+   amounts **exactly** (0 mismatches across 10M orders). So `price` is a rounded display
+   value. The rule was split: within ₹1 per unit it's `ITM_PRICE_ROUNDED` (info, flagged);
+   anything beyond is `ITM_LINE_AMOUNT_MISMATCH` (quarantined). On real data that's 49,065
+   flagged and 0 quarantined.
+4. **A performance cliff that only full-size data could show.** With 23M order lines the dbt
+   build went from 39 s to **441 s**, and one run failed with *out of memory*.
+   - Cause: `int_dq_violations` was a **view** read by two tables. dbt built both in
+     parallel, so all 26 rules over 33M rows ran **twice at once**. Inside, the CTE over the
+     de-duplicated orders was referenced about ten times and could be re-computed each time.
+   - Fix: make it a **table** (rules run once), mark the heavy CTEs `MATERIALIZED` (DuckDB
+     syntax, emitted through a dispatch macro), and set `memory_limit` so DuckDB spills to
+     disk instead of failing.
+   - Result: the full build takes **71.5 s** (6.2× faster), and the rules step takes 22.8 s.
+
+New rules came from profiling: `MENU_DUPLICATE_ITEM` (118,459 extra listings),
+`USR_DUPLICATE_EMAIL` (14,338 users share an email), and `MENU_ORPHAN_RESTAURANT` (273
+menu lines for restaurants that don't exist, quarantined). Cost-for-two text such as
+"₹200 FOR TWO" turned up in the menu price column 1,193 times.
+
+*Interview line:* "Every assumption I made from documentation was wrong in at least one
+place once the real files arrived. The contracts and profiling caught all of them before
+they reached a dashboard."

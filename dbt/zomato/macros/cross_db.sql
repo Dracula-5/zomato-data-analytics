@@ -54,3 +54,11 @@
         else {{ text_to_int(col) }}
     end
 {%- endmacro %}
+
+{#- `as materialized (...)` makes DuckDB compute a CTE once even when it is referenced many
+    times; other warehouses decide this themselves, so the keyword is emitted only on DuckDB. -#}
+{% macro materialized_cte() -%}
+    {{ return(adapter.dispatch('materialized_cte')()) }}
+{%- endmacro %}
+{% macro default__materialized_cte() -%}{%- endmacro %}
+{% macro duckdb__materialized_cte() -%}materialized{%- endmacro %}

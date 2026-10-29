@@ -1,5 +1,4 @@
-# Column names follow the reference repo's RAW DDL. When the real order_items.csv arrives,
-# `zap drift-check` compares its header against this file and flags any difference.
+# Header matches the real file (verified by the drift check, 2026-10-30).
 table: order_items
 file: order_items.csv
 kind: fact
@@ -26,10 +25,10 @@ columns:
     description: Food item (references food.f_id).
   - name: price
     type: DECIMAL(12,2)
-    description: Unit price charged (INR).
+    description: Unit price (INR), rounded down; line_amount is the exact value.
   - name: quantity
     type: BIGINT
     description: Units ordered.
   - name: line_amount
     type: DECIMAL(12,2)
-    description: price x quantity (INR).
+    description: Exact line value (INR); can exceed price x quantity by rounding.

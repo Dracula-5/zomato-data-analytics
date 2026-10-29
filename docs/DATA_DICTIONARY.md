@@ -21,11 +21,11 @@ Which restaurant sells which food item, and at what price (restaurant x food bri
 
 | Column | Type | Classification | Description |
 |---|---|---|---|
-| menu_id | VARCHAR | internal | Menu line identifier. |
+| menu_id | VARCHAR | internal | Menu identifier; repeats across lines, unique together with f_id. |
 | r_id | VARCHAR | internal | Restaurant identifier (references restaurant.id). |
 | f_id | VARCHAR | internal | Food item identifier (references food.f_id). |
 | cuisine | VARCHAR | public | Cuisine the item is listed under at this restaurant. |
-| price | VARCHAR | public | Listed price of the item in INR, as text. |
+| price | VARCHAR | public | Listed price in INR as text; a few rows hold cost-for-two text such as "₹200 FOR TWO". |
 
 ### raw.restaurant
 
@@ -55,13 +55,13 @@ Registered customers with demographic attributes. Contains personal data, so the
 | name | VARCHAR | pii | Customer full name. |
 | email | VARCHAR | pii | Customer email address. |
 | password | VARCHAR | secret | Account password as stored in the source (plain text). Never propagated past the raw layer; dropped in staging. |
-| age | VARCHAR | internal | Customer age in years. |
-| gender | VARCHAR | pii | Self-reported gender. |
-| marital_status | VARCHAR | pii | Self-reported marital status. |
-| occupation | VARCHAR | internal | Occupation category, e.g. "Student" or "Employee". |
-| monthly_income | VARCHAR | pii | Monthly income bracket as text. |
-| education | VARCHAR | internal | Highest educational qualification. |
-| family_size | VARCHAR | internal | Number of people in the household. |
+| Age | VARCHAR | internal | Customer age in years. |
+| Gender | VARCHAR | pii | Self-reported gender. |
+| Marital Status | VARCHAR | pii | Self-reported marital status. |
+| Occupation | VARCHAR | internal | Occupation category, e.g. "Student" or "Employee". |
+| Monthly Income | VARCHAR | pii | Monthly income bracket as text. |
+| Educational Qualifications | VARCHAR | internal | Highest educational qualification. |
+| Family size | VARCHAR | internal | Number of people in the household. |
 
 ### raw.orders
 
@@ -99,9 +99,9 @@ One row per line of an order (SYNTHETIC). The file has no date, so each line is 
 | order_id | BIGINT | internal | Parent order (references orders.order_id). |
 | r_id | BIGINT | internal | Restaurant (references restaurant.id). |
 | f_id | VARCHAR | internal | Food item (references food.f_id). |
-| price | DECIMAL(12,2) | internal | Unit price charged (INR). |
+| price | DECIMAL(12,2) | internal | Unit price (INR), rounded down; line_amount is the exact value. |
 | quantity | BIGINT | internal | Units ordered. |
-| line_amount | DECIMAL(12,2) | internal | price x quantity (INR). |
+| line_amount | DECIMAL(12,2) | internal | Exact line value (INR); can exceed price x quantity by rounding. |
 
 ### raw.reviews
 
@@ -390,7 +390,7 @@ Free-text customer reviews (SYNTHETIC; the real file has only 294 distinct comme
 
 ### staging.int_dq_violations
 
-*view*. Every rule in seeds/dq_rules.csv evaluated per record. One row = one record that broke one rule, with the rule's severity and action.
+*table*. Every rule in seeds/dq_rules.csv evaluated per record. One row = one record that broke one rule, with the rule's severity and action.
 
 | Column | Type | Classification | Tests | Description |
 |---|---|---|---|---|
@@ -416,11 +416,11 @@ Free-text customer reviews (SYNTHETIC; the real file has only 294 distinct comme
 
 ### staging.stg_menu
 
-*view*. Restaurant x food menu lines with a numeric price.
+*view*. Restaurant x food menu lines with a numeric price. menu_id alone is not unique in the source; (menu_id, food_id) is.
 
 | Column | Type | Classification | Tests | Description |
 |---|---|---|---|---|
-| menu_id | VARCHAR |  | not_null, unique |  |
+| menu_id | VARCHAR |  | not_null |  |
 | restaurant_id | BIGINT |  |  |  |
 | food_id | VARCHAR |  |  |  |
 | cuisine | VARCHAR |  |  |  |

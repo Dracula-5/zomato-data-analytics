@@ -112,6 +112,13 @@ def run_local(
         build = run_dbt(["build", "--full-refresh"], db_path, project)
         elapsed = build.run_results.get("elapsed_time")
         step("dbt_build", {"exit": build.returncode, "dbt_elapsed_s": elapsed}, t0)
+        # Keep dbt's per-node timings and test results with this run (docs generate would
+        # overwrite target/run_results.json).
+        folder = settings.artifacts_dir / "pipeline" / dataset
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "dbt_run_results.json").write_text(
+            json.dumps(build.run_results), encoding="utf-8"
+        )
         if not build.ok:
             raise PipelineError("dbt build failed; see the dbt output above")
 

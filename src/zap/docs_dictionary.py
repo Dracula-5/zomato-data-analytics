@@ -103,5 +103,6 @@ def write_dictionary(project_dir: Path, contracts: dict[str, Contract], out: Pat
     manifest = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
     catalog = json.loads((target / "catalog.json").read_text(encoding="utf-8"))
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render_dictionary(manifest, catalog, contracts), encoding="utf-8")
+    text = render_dictionary(manifest, catalog, contracts)
+    out.write_text(text, encoding="utf-8", newline="\n")  # LF on every OS, like git
     return out

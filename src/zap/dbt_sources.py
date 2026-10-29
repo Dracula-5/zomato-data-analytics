@@ -78,5 +78,5 @@ def write_sources(contracts: dict[str, Contract], path: Path) -> bool:
     if path.exists() and path.read_text(encoding="utf-8") == text:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="\n")  # LF on every OS, like git
     return True

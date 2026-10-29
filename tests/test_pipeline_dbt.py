@@ -41,7 +41,10 @@ def _sql(settings: Settings, sql: str) -> list[tuple[object, ...]]:
 def test_pipeline_runs_every_step(pipeline: tuple[Settings, PipelineRun, FixtureResult]) -> None:
     settings, run, _ = pipeline
     assert run.ok
-    assert [s.name for s in run.steps][-4:] == [
+    # dbt_deps only runs when dbt_packages/ is missing (a fresh clone, as in CI).
+    assert [s.name for s in run.steps if s.name != "dbt_deps"] == [
+        "ingest",
+        "gx_gate",
         "load_raw",
         "dbt_build",
         "quality_report",

@@ -113,7 +113,7 @@ def run_local(
         elapsed = build.run_results.get("elapsed_time")
         step("dbt_build", {"exit": build.returncode, "dbt_elapsed_s": elapsed}, t0)
         # Keep dbt's per-node timings and test results with this run (docs generate would
-        # overwrite target/run_results.json).
+        # overwrite the dataset's run_results.json).
         folder = settings.artifacts_dir / "pipeline" / dataset
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "dbt_run_results.json").write_text(

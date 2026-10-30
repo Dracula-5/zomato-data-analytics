@@ -233,6 +233,10 @@ with a passing `make check` and a commit.
   Retries are 2 with exponential backoff, plus timeouts, a failure callback and SLA
   alerting. A 3-day backfill passes, and rerunning one day leaves row counts identical
   (an automated test).
+  *Done:* a 7-day backfill through the scheduler; a re-run of one day leaves every table's
+  fingerprint identical; `tests/test_daily_replay.py` checks idempotency, and that
+  day-by-day equals a full rebuild, in CI. SLAs became Deadline Alerts (Airflow 3).
+  enrich_reviews and dbt_build_ai join the DAG in M8, and publish_metrics in M11.
 - **M5:** ⚠ I warn before each paid step.
   - Terraform creates the bucket (private, encrypted) and the IAM role (two-phase trust:
     placeholder, then Snowflake's ARN and external ID).
@@ -358,7 +362,7 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 - [x] M1 Ingest, lake, contracts, drift, sample (users, menu, order_items pending D1)
 - [x] M2 dbt (DuckDB), governance, GX, benchmarks
 - [x] M3 Streamlit dashboard (screenshots captured with the others in M11)
-- [ ] M4 Airflow (local)
+- [x] M4 Airflow (local)
 - [ ] M5 Cloud: Terraform, S3, Snowflake
 - [ ] M6 Forecasting + anomalies
 - [ ] M7 Knowledge graph

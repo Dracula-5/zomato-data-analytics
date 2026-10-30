@@ -1,0 +1,6 @@
+# Whitelist: the build context is the repo root, but images need only the dependency
+# manifests. Data, virtualenvs, warehouses and any .env file can never enter an image.
+*
+!pyproject.toml
+!uv.lock
+!README.md

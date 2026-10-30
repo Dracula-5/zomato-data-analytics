@@ -476,3 +476,152 @@ menu lines for restaurants that don't exist, quarantined). Cost-for-two text suc
 *Interview line:* "Every assumption I made from documentation was wrong in at least one
 place once the real files arrived. The contracts and profiling caught all of them before
 they reached a dashboard."
+
+---
+
+## M4: Orchestration with Airflow 3 (in Docker)
+
+### What runs where
+
+```
+airflow/docker-compose.yml
+  postgres          Airflow's own metadata (runs, task states). Not our data.
+  airflow-apiserver UI + REST API + the Execution API that tasks talk to (127.0.0.1 only)
+  airflow-scheduler decides what runs next; LocalExecutor runs the tasks
+  dag-processor     parses DAG files (a separate service since Airflow 3)
+  triggerer         deferrable tasks and async callbacks
+```
+
+- **Custom image:** Airflow 3.3.2, plus the project's tools in a **separate virtualenv**
+  (`/opt/zap-venv`) installed from `uv.lock`. dbt, DuckDB and Great Expectations never
+  share packages with Airflow itself, and the container runs exactly the versions CI tests.
+- **The code is mounted, not copied:** the repo is at `/opt/project`, and the CSVs are
+  mounted read-only at `/data`. A code fix is live in the next task run, no rebuild needed.
+- Every task is a `BashOperator` calling the same `zap` CLI used locally. Airflow only
+  orchestrates, so all the logic stays unit-tested outside Airflow.
+
+### One day per run
+
+The source is a static dump, so to exercise a *daily* pipeline the history is split by
+date. `make airflow-bootstrap` loads everything up to 2026-06-23 and builds the warehouse
+once. The DAG then replays one day per run (`{{ ds }}` = the run's logical date):
+
+| Task | What it does |
+|---|---|
+| drift_check | source headers and types vs the contracts; stops on breaking drift |
+| extract_partition | that day's facts into the lake (the day's folder is replaced) |
+| gx_validate | Great Expectations on that day only; stops on error-level failures |
+| load_raw | `DELETE` the day + `INSERT` it again, in one transaction |
+| dbt_snapshot | SCD2 history of restaurants |
+| dbt_build | incremental MERGE of the facts (3-day lookback), marts, every dbt test |
+| quality_report | rules + GX + dbt test results into the governance tables |
+
+`max_active_runs=1` because DuckDB allows one writer at a time. Past days are replayed
+with **`airflow backfill create`**, which runs through the real scheduler, one day after
+another.
+
+### Idempotency, and how it is proven
+
+Every step *replaces* data and never appends, so a retry or a manual re-run can't
+duplicate anything:
+
+- lake: the day's partition folder is written to a temp folder, then swapped in;
+- warehouse: delete-then-insert of that day in one transaction;
+- dbt: `MERGE` on the primary key; the snapshot only adds a row when a value changed.
+
+"Should be idempotent" isn't evidence, so there are three checks:
+
+1. `tests/test_daily_replay.py` (SYNTHETIC fixture, runs in CI): bootstrap, replay two
+   days, replay the last day again → every mart identical; then a full rebuild →
+   identical again. *Incremental day by day = full rebuild.* It also plants a review
+   dated before its order, across the cutoff (see bug 2 below).
+2. `zap fingerprint`: the row count and an order-independent checksum of every table,
+   skipping columns that only record *when* something ran (`_loaded_at`, `dbt_*`,
+   `valid_from`/`valid_to`). Floats are rounded to 6 decimals, because a parallel SUM can
+   add the same numbers in a different order. Its own tests prove it catches a changed
+   value, a NULL, a duplicate row, a deleted row and a new table.
+3. On the real 5% sample: fingerprint after the 7-day backfill, re-run one day through
+   the scheduler, fingerprint again (results below).
+
+### Results (from `artifacts/airflow/verification.json`, 2026-10-30)
+
+SAMPLED data: 5% of users, from the synthetic-looking source (see M2b).
+
+| Check | Result |
+|---|---|
+| 7 daily runs (2026-06-24 to 06-30) through the scheduler | 7/7 succeeded, no retries, 84–92 s per run* |
+| Re-run 2026-06-27 through the scheduler | 21/21 tables identical (raw, marts, snapshot) |
+| Day-by-day raw layer vs one ingest of the same sample | 7/7 tables identical |
+| Day-by-day warehouse vs a full dbt rebuild | 21/21 tables identical |
+| `alerts_smoke` | failure alert and deadline alert both recorded, with DAG and run ids |
+
+\* Airflow's start and end times. The Docker VM clock was being stepped by up to ~13 s
+(see bug 4), so treat these as approximate.
+
+After the backfill the warehouse holds 488,455 orders, 1,124,385 order lines and 14,615
+reviews. These figures were only reached after fixing the first two bugs below: before
+that, the day-by-day result was 160 reviews short of a one-shot load, and then 159 short
+of a full rebuild.
+
+### Reliability features
+
+- 2 retries with exponential backoff, a timeout on every task, and `on_failure_callback`
+  once retries are used up.
+- **Deadline Alerts** replace SLAs, which Airflow 3 removed: if a run isn't finished 30
+  minutes after it was queued, a callback fires. (Still marked experimental in 3.3.)
+- Alerts go to `artifacts/airflow/alerts.jsonl`, and to a webhook if `ALERT_WEBHOOK_URL`
+  is set (https only; a webhook outage never fails the pipeline).
+- `alerts_smoke` (`make airflow-smoke`) proves both callbacks on the real scheduler: one
+  task fails on purpose, and another sleeps past a 20-second deadline.
+
+### What went wrong (and what each one teaches)
+
+1. **The backfill comparison found a real bug.** The Airflow-built raw layer matched a
+   one-shot 5% ingest table for table, except for **160 reviews**. Root cause: in a sample, a
+   review was kept only if its order was *already in the lake*. Some reviews are dated
+   **before** their order (a known defect in this data). If the order falls after the
+   bootstrap cutoff, the review was skipped at bootstrap, and it was never picked up on a
+   later day because its own date had already passed. Fix: decide membership from the
+   *source* orders file (by the order's user), which doesn't depend on load progress. A
+   regression test recreates the exact case. Full-data runs were never affected (no
+   sampling).
+2. **The same bug one layer up, in dbt, and this one also affects full data.** With
+   the raw layer fixed, the marts built day by day still differed from a full rebuild:
+   `fct_reviews` was 159 rows short. `fct_reviews` keeps a review only if its order is in
+   `fct_orders`, and incremental runs only re-check *recently dated* reviews. So a review
+   dated before its order was dropped at bootstrap (no order yet) and never re-checked when
+   the order arrived. Fix: incremental runs also re-check reviews whose **order** is in the
+   new window. This is the classic *late-arriving parent* problem: the incremental filter
+   must cover every way a row can become valid, not just its own date. The replay test now
+   plants exactly this case. It failed before the fix, and the fixture had simply never
+   contained it.
+3. **A quiet day would have crashed the DAG.** A partitioned `COPY` of zero rows writes
+   no file, and the row count then failed on an empty folder. Real days always had rows,
+   so only the sampled fixture showed it. The count is now guarded.
+4. **`403 Invalid auth token`, on and off.** The API server rejected task tokens as "not
+   yet valid (iat)". Docker Desktop's WSL 2 clock was 12.6 s behind Windows and was being
+   *stepped backwards* every few seconds (`dmesg`: "Time jumped backwards"), beyond JWT's
+   10 s leeway. Retries recovered every run; the fix is `AIRFLOW__API_AUTH__JWT_LEEWAY=60`
+   in the local compose file. *Retries are not just for flaky networks.*
+5. **`airflow dags test` crashes with a Deadline Alert** (after all tasks succeed): it
+   passes the alert as a dict where the scheduler expects a stored id. It's an Airflow bug
+   in an experimental feature, so replays use `backfill create`, the real scheduler path.
+6. **The deadline callback got JSON, not objects.** Airflow 3.3 sends
+   `{"dag_run": <REST API dict>, "deadline": {...}}`, and calls the run id `dag_run_id`.
+   The first smoke run logged `?` for every field; the callback now reads both shapes, and
+   the test uses the real shape copied from Airflow's source.
+7. **A CI check that could never pass.** Airflow 3 lists DAGs from its *database*, so in a
+   fresh container `dags list` is empty and "no import errors" proves nothing. The check
+   (`airflow/check_dags.sh`) runs `dags reserialize` first, and was itself tested against
+   a deliberately broken DAG.
+8. **Shared dbt `target/` folder.** Local runs and Airflow share the checkout, so they
+   overwrote each other's `run_results.json`. dbt now writes to `target/<dataset>/`.
+9. **Port 8080 was taken** by another program on this laptop, so the host port is
+   configurable (`AIRFLOW_HOST_PORT`).
+10. **Disk.** Docker's virtual disk grew to 44.7 GB and never shrinks by itself (C: fell to
+   258 MB free). Fix: prune, `fstrim`, then compact the VHDX (needs admin).
+
+*Interview line:* "I didn't trust 'it's idempotent'. I fingerprinted the warehouse, re-ran
+a day and compared, and checked day-by-day loads against a one-shot load and a full
+rebuild. Those comparisons found two late-arriving-data bugs (one in sampling, one in
+an incremental dbt model) that no unit test had caught. Each now has a regression test."

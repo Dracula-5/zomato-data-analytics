@@ -98,8 +98,8 @@ def render_dictionary(
     return "\n".join(lines).rstrip() + "\n"
 
 
-def write_dictionary(project_dir: Path, contracts: dict[str, Contract], out: Path) -> Path:
-    target = project_dir / "target"
+def write_dictionary(target: Path, contracts: dict[str, Contract], out: Path) -> Path:
+    """`target` is the dbt artifacts folder of the dataset that ran `dbt docs generate`."""
     manifest = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
     catalog = json.loads((target / "catalog.json").read_text(encoding="utf-8"))
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,8 @@
 import json
+from datetime import date
 from pathlib import Path
 
+import duckdb
 import pytest
 
 from helpers import drop_column, parquet, rewrite_csv, scalar
@@ -185,3 +187,102 @@ def test_manifest_written_and_history_appended(
     assert len(data["drift"]) == 7
     history = (path.parent / "history.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(history) == 2
+
+
+def test_until_writes_only_history_up_to_the_cutoff(
+    contracts: dict[str, Contract], fixture_data: tuple[Path, FixtureResult], tmp_path: Path
+) -> None:
+    out = tmp_path / "lake"
+    manifest = ingest(contracts, fixture_data[0], out, pct=100, until=date(2026, 6, 20))
+    assert manifest.date_filter == "<= 2026-06-20"
+    for table, col in (
+        ("orders", "order_date"),
+        ("order_items", "order_date"),
+        ("reviews", "review_date"),
+    ):
+        rel = parquet(out / "raw" / table)
+        assert str(scalar(f"select max({col}) from {rel}")) <= "2026-06-20", table
+        assert scalar(f"select count(*) from {rel} where {col} is null") == 0
+    items, orders = parquet(out / "raw" / "order_items"), parquet(out / "raw" / "orders")
+    assert scalar(f"select count(*) from {items} anti join {orders} using (order_id)") == 0
+
+
+def test_day_mode_replaces_only_that_partition(
+    contracts: dict[str, Contract], fixture_data: tuple[Path, FixtureResult], tmp_path: Path
+) -> None:
+    out = tmp_path / "lake"
+    ingest(contracts, fixture_data[0], out, pct=100, until=date(2026, 6, 20))
+    day = date(2026, 6, 21)
+    first = ingest(contracts, fixture_data[0], out, pct=100, day=day, skip_drift=True)
+    again = ingest(contracts, fixture_data[0], out, pct=100, day=day, skip_drift=True)
+    status = {t.table: t.status for t in again.tables}
+    assert status["food"] == "skipped_dimension" and status["orders"] == "written"
+    assert [t.rows_written for t in first.tables] == [t.rows_written for t in again.tables]
+    orders = parquet(out / "raw" / "orders")
+    assert str(scalar(f"select max(order_date) from {orders}")) == "2026-06-21"
+    expected = scalar(
+        f"select count(*) from read_csv('{(fixture_data[0] / 'orders.csv').as_posix()}') "
+        "where order_date <= '2026-06-21'"
+    )
+    assert scalar(f"select count(*) from {orders}") == expected  # nothing duplicated
+
+
+def test_date_modes_validate_arguments(
+    contracts: dict[str, Contract], fixture_data: tuple[Path, FixtureResult], tmp_path: Path
+) -> None:
+    with pytest.raises(ValueError, match="either"):
+        ingest(contracts, fixture_data[0], tmp_path, day=date(2026, 6, 1), until=date(2026, 6, 2))
+    with pytest.raises(ValueError, match="skip_drift"):
+        ingest(contracts, fixture_data[0], tmp_path, skip_drift=True)
+
+
+def test_sampled_date_split_equals_one_full_ingest(
+    contracts: dict[str, Contract], source_copy: Path, tmp_path: Path
+) -> None:
+    """Bootstrap + one run per day must load exactly what one ingest loads, for a SAMPLE too.
+
+    Regression: a review dated *before* its order (a defect in the real data) whose order
+    lands after the cutoff was lost, because sample membership was read from the
+    date-limited lake, where that order did not exist yet.
+    """
+    pct, cutoff = 50.0, date(2026, 6, 20)
+    orders_csv = (source_copy / "orders.csv").as_posix()
+    order_id = next(
+        oid
+        for oid, uid in duckdb.connect()
+        .execute(
+            f"select order_id, user_id from read_csv('{orders_csv}') "
+            "where order_date = '2026-06-25' order by order_id"
+        )
+        .fetchall()
+        if sample.in_sample(uid, pct)
+    )
+
+    def early_review(rows: list[list[str]]) -> list[list[str]]:
+        header, first = rows[0], rows[1]
+        first[header.index("order_id")] = str(order_id)
+        first[header.index("review_date")] = "2026-06-18"  # before the cutoff and the order
+        moved.append(int(first[header.index("review_id")]))
+        return rows
+
+    moved: list[int] = []
+    rewrite_csv(source_copy / "reviews.csv", early_review)
+    facts = ["orders", "order_items", "reviews"]
+    split, whole = tmp_path / "split", tmp_path / "whole"
+    reviews_csv = (source_copy / "reviews.csv").as_posix()
+    last = scalar(f"select max(review_date) from read_csv('{reviews_csv}')")  # after the orders
+    assert isinstance(last, date)
+    ingest(contracts, source_copy, split, pct=pct, until=cutoff)
+    for ordinal in range(cutoff.toordinal() + 1, last.toordinal() + 1):  # one run per day
+        day = date.fromordinal(ordinal)
+        ingest(contracts, source_copy, split, pct=pct, tables=facts, day=day, skip_drift=True)
+    ingest(contracts, source_copy, whole, pct=pct)
+
+    reviews = parquet(split / "raw" / "reviews")
+    assert scalar(f"select count(*) from {reviews} where review_id = {moved[0]}") == 1
+    for table in facts:
+        key = contracts[table].primary_key[0]
+        ids = f"select {key} from {{}} order by all"
+        a = duckdb.connect().execute(ids.format(parquet(split / "raw" / table))).fetchall()
+        b = duckdb.connect().execute(ids.format(parquet(whole / "raw" / table))).fetchall()
+        assert a == b, table

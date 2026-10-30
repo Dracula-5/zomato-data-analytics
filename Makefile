@@ -10,7 +10,8 @@ export PYTHONUTF8 := 1
 SAMPLE_PCT ?= 5
 
 .PHONY: help setup lint format typecheck test check hooks fixtures info \
-        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve bench app
+        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve bench app \
+        airflow-bootstrap airflow-up airflow-down airflow-replay airflow-smoke
 
 help: ## Show this list
 	@$(RUN) python scripts/make_help.py $(firstword $(MAKEFILE_LIST))
@@ -78,3 +79,29 @@ bench: ## Benchmarks on the full dataset: incremental vs full refresh, fact vs m
 
 app: ## Open the Streamlit dashboard at http://localhost:8501
 	$(RUN) streamlit run app/Home.py
+
+# --- Airflow (Docker) --------------------------------------------------------------------
+COMPOSE_AF := docker compose -f airflow/docker-compose.yml
+AF_DATASET := airflow_5pct
+AF_CUTOFF := 2026-06-23
+
+airflow-bootstrap: ## Build the Airflow dataset with history up to AF_CUTOFF (the DAG replays the rest)
+	$(RUN) zap ingest --dataset $(AF_DATASET) --sample-pct 5 --until $(AF_CUTOFF)
+	$(RUN) zap load --dataset $(AF_DATASET)
+	$(RUN) zap dbt --dataset $(AF_DATASET) build --full-refresh
+
+airflow-up: ## Build the image and start Airflow; UI at http://localhost:8080 (AIRFLOW_HOST_PORT)
+	$(COMPOSE_AF) up -d --build
+
+airflow-down: ## Stop Airflow (keeps its metadata volume)
+	$(COMPOSE_AF) down
+
+airflow-replay: ## Run the DAG through the scheduler for FROM..TO (default: all of 2026-06-24..30)
+	$(COMPOSE_AF) exec airflow-scheduler airflow dags unpause zomato_daily
+	$(COMPOSE_AF) exec airflow-scheduler airflow backfill create --dag-id zomato_daily \
+		--from-date $(or $(FROM),2026-06-24) --to-date $(or $(TO),2026-06-30) \
+		--max-active-runs 1 --reprocess-behavior completed
+
+airflow-smoke: ## Trigger alerts_smoke: one deadline alert + one failure alert -> artifacts/airflow/alerts.jsonl
+	$(COMPOSE_AF) exec airflow-scheduler airflow dags unpause alerts_smoke
+	$(COMPOSE_AF) exec airflow-scheduler airflow dags trigger alerts_smoke

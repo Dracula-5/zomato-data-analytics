@@ -14,7 +14,14 @@
 with reviews as (
     select * from {{ ref('stg_reviews') }}
     {% if is_incremental() %}
+    -- Recent reviews, plus older ones whose ORDER only just arrived: some reviews are dated
+    -- before their order, and the inner join below drops them until the order exists.
+    -- Filtering on review_date alone would never look at them again.
     where review_date >= {{ incremental_cutoff('review_date') }}
+       or order_id in (
+           select order_id from {{ ref('fct_orders') }}
+           where order_date >= {{ incremental_cutoff('order_date') }}
+       )
     {% endif %}
 ),
 

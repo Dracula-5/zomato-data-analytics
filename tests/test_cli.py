@@ -110,3 +110,10 @@ def test_local_command_reports_failure(cli_env: Path) -> None:
     result = runner.invoke(app, ["local", "--sample-pct", "100", "--dataset", "x", "--no-docs"])
     assert result.exit_code == 1
     assert "PIPELINE FAILED" in result.output
+
+
+def test_dq_report_needs_a_dbt_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WAREHOUSE_DIR", str(tmp_path))
+    result = runner.invoke(app, ["dq-report", "--dataset", "never_built"])
+    assert result.exit_code == 1
+    assert "no dbt run for dataset 'never_built'" in result.output

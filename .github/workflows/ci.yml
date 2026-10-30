@@ -45,3 +45,16 @@ jobs:
         with:
           name: test-reports
           path: artifacts/
+
+  airflow-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the Airflow image (Airflow 3.3.2 + project venv from uv.lock)
+        run: docker build -f airflow/Dockerfile -t zap-airflow:ci .
+
+      - name: Every DAG parses with no import errors
+        run: |
+          docker run --rm -v "$PWD:/opt/project:ro" -v "$PWD/airflow/dags:/opt/airflow/dags:ro" \
+            -e PYTHONPATH=/opt/project/src zap-airflow:ci bash /opt/project/airflow/check_dags.sh

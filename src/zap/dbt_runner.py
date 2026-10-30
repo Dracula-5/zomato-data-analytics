@@ -34,18 +34,31 @@ def dbt_executable() -> str:
     return str(local) if local.exists() else "dbt"
 
 
+def dbt_target_dir(db_path: Path, project_dir: Path) -> Path:
+    """dbt's artifacts folder for one dataset: `target/<dataset>`.
+
+    One folder per warehouse file, so runs on different datasets (a local sample, the
+    test fixture, the Airflow container sharing this checkout) never overwrite each
+    other's run_results.json, manifest or docs.
+    """
+    return project_dir.resolve() / "target" / db_path.stem
+
+
 def dbt_env(db_path: Path, project_dir: Path) -> dict[str, str]:
+    target = dbt_target_dir(db_path, project_dir)
     return {
         **os.environ,
         "DUCKDB_PATH": str(db_path.resolve()),
         "DBT_PROFILES_DIR": str(project_dir.resolve()),
+        "DBT_TARGET_PATH": str(target),
+        "DBT_LOG_PATH": str(target / "logs"),
         "PYTHONUTF8": "1",
     }
 
 
 def run_dbt(args: list[str], db_path: Path, project_dir: Path, capture: bool = False) -> DbtRun:
     """Run `dbt <args>`; returns exit code, wall time and parsed run_results.json."""
-    results_path = project_dir / "target" / "run_results.json"
+    results_path = dbt_target_dir(db_path, project_dir) / "run_results.json"
     started_ns = time.time_ns()
     t0 = time.perf_counter()
     proc = subprocess.run(  # noqa: S603 - fixed executable, argument list, no shell

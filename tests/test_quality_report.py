@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from zap.quality.gx_suite import ExpectationResult, GxReport
 from zap.quality.report import dbt_test_rows, summarize_dbt, summarize_rules
 
 RUN_RESULTS = {
@@ -41,3 +44,26 @@ def test_rule_summary() -> None:
         "records_flagged": 7,
         "records_quarantined": 4,
     }
+
+
+def test_gx_report_json_round_trip(tmp_path: Path) -> None:
+    report = GxReport(
+        dataset="d",
+        partition_date="2026-06-24",
+        validated_at="2026-06-24T00:00:00+00:00",
+        results=[
+            ExpectationResult(
+                "orders", "ExpectColumnValuesToNotBeNull", "order_id", "error", True, 10, 0
+            ),
+            ExpectationResult(
+                "orders", "ExpectColumnValuesToBeUnique", "order_id", "warn", False, 10, 2
+            ),
+        ],
+        rows_validated={"orders": 10},
+        seconds=1.5,
+    )
+    path = tmp_path / "gx.json"
+    path.write_text(report.to_json(), encoding="utf-8")
+    loaded = GxReport.from_json(path)
+    assert loaded == report  # derived fields (gate_passed, counts) are recomputed, not stored
+    assert loaded.gate_passed and len(loaded.failed) == 1

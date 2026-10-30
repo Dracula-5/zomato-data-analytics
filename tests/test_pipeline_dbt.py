@@ -8,11 +8,13 @@ from pathlib import Path
 
 import duckdb
 import pytest
+from typer.testing import CliRunner
 
 from helpers import CONTRACTS_DIR, make_settings, rewrite_csv
 from zap.bench import bench_incremental, bench_queries
-from zap.config import Settings
-from zap.dbt_runner import run_dbt
+from zap.cli import app
+from zap.config import Settings, get_settings
+from zap.dbt_runner import dbt_target_dir, run_dbt
 from zap.docs_dictionary import write_dictionary
 from zap.fixtures import FixtureResult
 from zap.ingest.contracts import load_contracts
@@ -174,13 +176,38 @@ def test_data_dictionary_covers_models_and_classification(
     pipeline: tuple[Settings, PipelineRun, FixtureResult], tmp_path: Path
 ) -> None:
     settings, _, _ = pipeline
-    out = write_dictionary(
-        settings.dbt_project_dir, load_contracts(CONTRACTS_DIR), tmp_path / "dd.md"
-    )
+    target = dbt_target_dir(settings.duckdb_path("fixture"), settings.dbt_project_dir)
+    out = write_dictionary(target, load_contracts(CONTRACTS_DIR), tmp_path / "dd.md")
     text = out.read_text(encoding="utf-8")
     assert "### marts.fct_orders" in text and "### raw.users" in text
     assert "| email_masked | VARCHAR | pii |" in text
     assert "| password | VARCHAR | secret |" in text
+
+
+def test_dq_report_cli_rebuilds_the_same_report(
+    pipeline: tuple[Settings, PipelineRun, FixtureResult], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`zap dq-report` (the DAG's last task) must agree with the report `run_local` wrote;
+    the GX part goes through GxReport.from_json, so this also checks the JSON round trip."""
+    settings, _, _ = pipeline
+    for var, path in (
+        ("LAKE_DIR", settings.lake_dir),
+        ("WAREHOUSE_DIR", settings.warehouse_dir),
+        ("ARTIFACTS_DIR", settings.artifacts_dir),
+    ):
+        monkeypatch.setenv(var, str(path))
+    get_settings.cache_clear()
+    report_path = settings.artifacts_dir / "quality" / "fixture" / "dq_report.json"
+    before = json.loads(report_path.read_text(encoding="utf-8"))
+    saved = settings.artifacts_dir / "pipeline" / "fixture" / "dbt_run_results.json"
+    result = CliRunner().invoke(
+        app, ["dq-report", "--dataset", "fixture", "--run-results", str(saved)]
+    )
+    assert result.exit_code == 0, result.output
+    after = json.loads(report_path.read_text(encoding="utf-8"))
+    for key in ("dbt", "gx", "rules", "rule_results"):
+        assert after[key] == before[key], key
+    assert after["gx"]["expectations"] > 0
 
 
 def test_gate_failure_stops_before_load(

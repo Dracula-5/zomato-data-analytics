@@ -10,7 +10,7 @@ import typer
 
 from zap.bench import bench_incremental, bench_queries, write_bench
 from zap.config import get_settings
-from zap.dbt_runner import run_dbt
+from zap.dbt_runner import dbt_target_dir, run_dbt
 from zap.dbt_sources import write_sources
 from zap.docs_dictionary import write_dictionary
 from zap.fixtures import FixtureSpec, generate_fixture
@@ -19,8 +19,11 @@ from zap.ingest.contracts import load_contracts
 from zap.ingest.drift import append_drift_log, check_drift
 from zap.ingest.lake import DriftError, ingest, new_run_id, write_manifest
 from zap.pipeline import PipelineError, run_local
-from zap.quality.gx_suite import validate_lake, write_gx_report
+from zap.quality.gx_suite import GxReport, validate_lake, write_gx_report
+from zap.quality.report import build_report
 from zap.warehouse.duckdb_loader import load_raw, write_load_log
+from zap.warehouse.fingerprint import diff as fingerprint_diff
+from zap.warehouse.fingerprint import fingerprint
 
 app = typer.Typer(help="Zomato AI Data Platform CLI.", no_args_is_help=True)
 
@@ -86,6 +89,17 @@ def ingest_cmd(
     ] = None,
     dataset: Annotated[str | None, typer.Option(help="Label, e.g. `fixture`.")] = None,
     table: TablesOpt = None,
+    day: Annotated[
+        datetime | None,
+        typer.Option("--date", formats=["%Y-%m-%d"], help="Extract ONE day's fact partitions."),
+    ] = None,
+    until: Annotated[
+        datetime | None,
+        typer.Option(formats=["%Y-%m-%d"], help="Only history up to this date (bootstrap)."),
+    ] = None,
+    skip_drift_check: Annotated[
+        bool, typer.Option(help="Drift already checked by a previous step (date runs only).")
+    ] = False,
 ) -> None:
     """Load source CSVs into the Parquet lake after a schema-drift gate."""
     settings = get_settings()
@@ -101,8 +115,11 @@ def ingest_cmd(
             tables=table,
             drift_log=_drift_log(),
             dataset=label,
+            day=day.date() if day else None,
+            until=until.date() if until else None,
+            skip_drift=skip_drift_check,
         )
-    except DriftError as err:
+    except (DriftError, ValueError) as err:
         typer.echo(f"ERROR: {err}", err=True)
         raise typer.Exit(code=1) from err
     path = write_manifest(manifest, settings.artifacts_dir)
@@ -202,10 +219,12 @@ def data_dictionary_cmd(
     out: Annotated[Path, typer.Option(help="Output Markdown file.")] = Path(
         "docs/DATA_DICTIONARY.md"
     ),
+    dataset: DatasetOpt = None,
 ) -> None:
     """Write the data dictionary from the last `dbt docs generate` and the contracts."""
     settings = get_settings()
-    path = write_dictionary(settings.dbt_project_dir, load_contracts(settings.contracts_dir), out)
+    target = dbt_target_dir(settings.duckdb_path(_dataset(dataset)), settings.dbt_project_dir)
+    path = write_dictionary(target, load_contracts(settings.contracts_dir), out)
     typer.echo(f"Data dictionary written to {path}")
 
 
@@ -227,6 +246,61 @@ def bench_cmd(
         path = write_bench(result, settings.artifacts_dir, label)
         typer.echo(json.dumps(result, indent=2))
         typer.echo(f"-> {path}")
+
+
+@app.command("dq-report")
+def dq_report_cmd(
+    dataset: DatasetOpt = None,
+    run_results_file: Annotated[
+        Path | None,
+        typer.Option("--run-results", help="A saved run_results.json (default: the last run)."),
+    ] = None,
+) -> None:
+    """Rebuild the quality report from the last dbt run and the last GX run of a dataset."""
+    settings = get_settings()
+    label = _dataset(dataset)
+    db_path = settings.duckdb_path(label)
+    results_path = run_results_file or (
+        dbt_target_dir(db_path, settings.dbt_project_dir) / "run_results.json"
+    )
+    if not results_path.exists():
+        typer.echo(f"ERROR: no dbt run for dataset '{label}' ({results_path})", err=True)
+        raise typer.Exit(code=1)
+    run_results = json.loads(results_path.read_text(encoding="utf-8"))
+    gx_path = settings.artifacts_dir / "quality" / label / "gx_results.json"
+    gx = GxReport.from_json(gx_path) if gx_path.exists() else None
+    report = build_report(
+        settings.duckdb_path(label), label, run_results, gx, settings.artifacts_dir
+    )
+    typer.echo(json.dumps({k: report[k] for k in ("dbt", "gx", "rules")}, indent=2))
+
+
+@app.command("fingerprint")
+def fingerprint_cmd(
+    dataset: DatasetOpt = None,
+    schema: Annotated[
+        list[str] | None, typer.Option("--schema", "-s", help="Schemas (default: marts).")
+    ] = None,
+    out: Annotated[Path | None, typer.Option(help="Also save the fingerprint here.")] = None,
+    compare: Annotated[
+        Path | None, typer.Option(help="A saved fingerprint; exit 1 if anything differs.")
+    ] = None,
+) -> None:
+    """Row counts + order-independent checksums of a warehouse (proves two builds match)."""
+    settings = get_settings()
+    fp = fingerprint(settings.duckdb_path(_dataset(dataset)), tuple(schema or ["marts"]))
+    text = json.dumps(fp, indent=2)
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text + "\n", encoding="utf-8", newline="\n")
+    if compare is None:
+        typer.echo(text)
+        return
+    changed = fingerprint_diff(json.loads(compare.read_text(encoding="utf-8")), fp)
+    if changed:
+        typer.echo(f"DIFFERENT: {', '.join(changed)}", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(f"IDENTICAL: {len(fp)} tables match {compare}")
 
 
 @app.command("local")

@@ -743,3 +743,129 @@ grows by an order of magnitude. The times include the network round trip from th
 5. **Going from sample to full needs `--full-refresh`.** Incremental models held sample rows,
    and a normal run merges only recent days on top. The snapshot was safe because restaurants
    aren't sampled: its row count was the same on both datasets.
+
+## M6: Forecasting and anomaly detection
+
+### Look at the data before choosing a model
+
+912 days with none missing, and three facts that decided everything else:
+
+- **Steady growth:** about 6,100 orders a day in January 2024, 15,500 in June 2026.
+- **A fixed weekly shape:** Saturday is 60% above Tuesday, with the same shares every year.
+- **Nothing else:** no holiday effect (Diwali and New Year look normal), no month-of-year
+  pattern, and no day more than about 9% from its weekday's recent median.
+
+So the series is growth × weekday × noise. That's why this data can't reward a clever model,
+and it's a sign of generated data: real food delivery has festivals and rainy days.
+
+### Three models, simplest first
+
+| Model | Idea | Why it's here |
+|---|---|---|
+| Seasonal naive | repeat last week | the baseline; a model that can't beat it is useless |
+| ETS (Holt-Winters) | damped trend × weekly pattern | built for exactly this structure |
+| LightGBM | one model across all series | can learn things ETS can't, if there's anything to learn |
+
+**Trees can't extrapolate.** A tree predicts an average of values it saw in training, so on a
+growing series it can never predict a new high. So LightGBM never sees raw volumes: it predicts
+`log(target / recent 28-day level)`, and the level carries the growth. A test checks that its
+forecast exceeds anything in its training data.
+
+**Direct forecasting, no feedback.** Each row means "standing at this day, predict N days
+ahead". A recursive model would feed its own predictions back in, so errors would compound.
+
+### Walk-forward backtest, and how leakage is ruled out
+
+8 folds × 14 days, covering 2026-03-11 to 2026-06-30. Each fold cuts the history before any
+model runs. Two tests guard this: multiplying every value after the cut by 50 must change no
+forecast, for all three models, and `direct_rows` only ever shifts data backwards. Model
+settings were fixed in advance, not tuned on these folds.
+
+### Results (from `artifacts/forecast_backtest.json`, 2026-10-30 UTC)
+
+Full data, from the synthetic-looking source (see M2b). 22 series: national and the top 10
+cities, for orders and GMV. MAPE, lower is better; sMAPE is within 0.1 of it throughout.
+
+| Orders | National MAPE | Mean city MAPE | Gain over baseline, all series |
+|---|---|---|---|
+| Seasonal naive | 1.16% | 4.43% | baseline |
+| **ETS** | **0.64%** | **3.21%** | **28.1%** |
+| LightGBM | 0.70% | 3.29% | 26.0% |
+| *Poisson noise floor* | *0.66%* | *3.05%* | |
+
+| GMV | National MAPE | Mean city MAPE | Gain over baseline, all series |
+|---|---|---|---|
+| Seasonal naive | 1.40% | 6.38% | baseline |
+| **ETS** | **0.96%** | **4.56%** | **28.5%** |
+| LightGBM | 1.00% | 4.64% | 27.2% |
+
+ETS beat the baseline in 8 of 8 national folds and 75 of 80 city folds on orders, and 76 of
+80 on GMV. 4 of the ETS fits raised a convergence warning.
+
+**The noise floor is the most useful number here.** If a day's orders are Poisson, even a
+perfect forecast has a MAPE of about `sqrt(2 / (pi × mean))`. ETS sits on that floor, so it
+has taken out all the signal there is. (0.64% below 0.66% isn't a miracle: the floor is an
+approximation, and 112 test days is a small sample.) So LightGBM can't win here, however well
+it's tuned, and more tuning would only fit noise. **The simple model is the right choice**,
+and that's a better interview answer than "I used gradient boosting".
+
+Repeating last week has a bias of −0.84% nationally, because it's always a week behind
+the growth. ETS removes most of that, at −0.22%.
+
+### Anomaly detection
+
+The data has no labelled incidents, so real days can't be scored. Instead, events are injected
+into a copy of each series (never the warehouse): spikes and drops of 20, 30 and 50%, and a
+3-day 40% outage. Each series gets every event twice, for 20 seeds, which makes 7,920 injected
+days and 341,000 normal days. Thresholds are the textbook values, fixed before any result.
+
+Each day is compared with the median of the same weekday over the previous 8 weeks. The size of
+that gap is then scored with a median-based z-score over the previous 56 days. Medians matter
+because an earlier anomaly would inflate a mean and a standard deviation and hide the next one.
+Only earlier days are used, so it could run live, and a test proves that.
+
+| SYNTHETIC injected events | Same-weekday robust z | Plain rolling z |
+|---|---|---|
+| Recall | **85.4%** | 7.8% |
+| Precision | 90.5% | 89.3% |
+| F1 | 0.879 | 0.143 |
+| False alarms per 1,000 normal days | 2.08 | 0.22 |
+
+The plain z-score finds almost nothing, and no 20% or 30% drop at all, because the weekly swing
+inflates its standard deviation. On quiet weekdays a real drop still looks normal.
+
+| Recall by event | | Recall by series | |
+|---|---|---|---|
+| 50% drop | 99.9% | National | 100% |
+| 3-day 40% outage | 97.3% | Bangalore (largest city) | 96.9% |
+| 50% spike | 93.5% | Mumbai | 80.0% |
+| 30% drop | 89.9% | Ahmedabad | 67.4% |
+| 30% spike | 75.4% | Lucknow (smallest of the 10) | 60.3% |
+| 20% drop | 63.7% | | |
+| 20% spike | 53.8% | | |
+
+Small cities miss more because their daily noise is larger: a 20% move in Lucknow is close to
+normal variation. That's a limit of the data, not a bug.
+
+**Read the precision with care.** 90.5% depends on how often anomalies happen, and here 2.3% of
+days are injected. The false-alarm rate doesn't depend on that. If real incidents hit 1 day in
+1,000, the same detector would have about 29% precision: 0.85 true alarms for every 2.08 false
+ones. On the real, unchanged series it flags 48 of 20,064 days (2.4 per 1,000), which is about
+the false-alarm rate, so there's no sign of real incidents in this data. A team using this
+would want to look at a few alerts a month, or raise the threshold and accept lower recall.
+
+### What went wrong (and what each one teaches)
+
+1. **`lightgbm`'s `LGBMRegressor` needs scikit-learn.** The native `lgb.train` API does the same
+   job with one dependency fewer.
+2. **A test failed because my hand calculation was wrong.** I expected sMAPE 10.276; the true
+   value is (20/210 + 40/380) / 2 = 10.025%. Work the expected value out properly before
+   doubting either side.
+3. **`def f(seeds=SEEDS)` binds at definition time.** A test that patched `SEEDS` to speed up
+   changed nothing. The caller now passes it explicitly.
+4. **Looking at the page found a bug that had been there since M3.** Every test passed, but in
+   dark mode the charts were unreadable on a white page. One line in `.streamlit/config.toml`,
+   `[theme] font = ...`, fixed Streamlit to a light theme, while the chart code still followed
+   the browser's dark setting. Removing it fixed all pages, and a test now keeps it out. It only
+   showed up by rendering the real page in both modes: *a passing test can't tell you a chart
+   is unreadable.*

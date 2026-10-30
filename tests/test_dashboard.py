@@ -2,6 +2,7 @@
 test of every Streamlit page (streamlit.testing AppTest runs the page script in-process)."""
 
 import json
+import tomllib
 from datetime import date
 from pathlib import Path
 
@@ -95,6 +96,12 @@ def test_theme() -> None:
     assert scale[0] == [0.0, SEQUENTIAL["light"][0]] and scale[-1][0] == 1.0
     fig = style(go.Figure(go.Scatter(x=[1, 2], y=[3, 4])), "dark", height=200)
     assert fig.layout.height == 200 and fig.layout.paper_bgcolor == "rgba(0,0,0,0)"
+
+
+def test_pages_can_follow_the_viewers_theme() -> None:
+    # A [theme] section pins Streamlit to light while the charts still draw for dark mode.
+    config = tomllib.loads((REPO_ROOT / ".streamlit/config.toml").read_text(encoding="utf-8"))
+    assert "theme" not in config
 
 
 def _app(page: str, monkeypatch: pytest.MonkeyPatch, warehouse: Path, artifacts: Path) -> AppTest:

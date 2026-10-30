@@ -6,5 +6,5 @@ port = 8501
 [browser]
 gatherUsageStats = false
 
-[theme]
-font = "sans serif"
+# No [theme] section: setting any option there fixes the app to one theme and ignores the
+# viewer's light or dark setting, while the charts still follow it (see dashboard/ui.py).

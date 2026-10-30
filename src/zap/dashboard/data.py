@@ -143,6 +143,75 @@ def gx_results(db: Path) -> pd.DataFrame:
         )
 
 
+def has_forecasts(db: Path) -> bool:
+    try:
+        query(db, "select 1 from forecast.accuracy limit 1")
+    except duckdb.CatalogException:
+        return False
+    return True
+
+
+def forecast_scopes(db: Path) -> list[str]:
+    """National first, then cities alphabetically."""
+    frame = query(
+        db,
+        """select distinct scope from forecast.accuracy
+           order by case when scope = 'National' then 0 else 1 end, scope""",
+    )
+    return [str(scope) for scope in frame["scope"]]
+
+
+def forecast_accuracy(db: Path, metric: str, scope: str) -> pd.DataFrame:
+    return query(
+        db,
+        """select model, mape, smape, bias_pct from forecast.accuracy
+           where metric = ? and scope = ? order by mape""",
+        [metric, scope],
+    )
+
+
+def best_forecast_model(db: Path, metric: str) -> str:
+    """Lowest mean MAPE across all series, as in the backtest report."""
+    frame = query(
+        db,
+        """select model from forecast.accuracy where metric = ?
+           group by model order by avg(mape), model limit 1""",
+        [metric],
+    )
+    return str(frame["model"].iloc[0])
+
+
+def forecast_lines(db: Path, metric: str, scope: str, model: str) -> pd.DataFrame:
+    """Backtest days with actuals, then the days ahead (no actual yet)."""
+    return query(
+        db,
+        """select target_date, actual, forecast, 'backtest' as kind from forecast.backtest
+           where metric = ? and scope = ? and model = ?
+           union all
+           select target_date, null, forecast, 'next' from forecast.next_days
+           where metric = ? and scope = ? and model = ?
+           order by target_date""",
+        [metric, scope, model, metric, scope, model],
+    )
+
+
+def noise_floor(db: Path, scope: str) -> float | None:
+    frame = query(db, "select mape from forecast.noise_floor where scope = ?", [scope])
+    return float(frame["mape"].iloc[0]) if len(frame) else None
+
+
+def detector_scores(db: Path) -> pd.DataFrame:
+    return query(db, "select * from forecast.detector_scores order by recall desc")
+
+
+def event_recall(db: Path) -> pd.DataFrame:
+    return query(db, "select * from forecast.event_recall order by detector, event")
+
+
+def real_anomalies(db: Path) -> pd.DataFrame:
+    return query(db, "select * from forecast.anomalies order by order_date desc, scope, metric")
+
+
 def latest_drift(log_path: Path) -> pd.DataFrame:
     """Most recent drift check per table, from the JSONL audit log."""
     if not log_path.exists():

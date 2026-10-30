@@ -250,6 +250,34 @@ def bench_cmd(
         typer.echo(f"-> {path}")
 
 
+@app.command("forecast")
+def forecast_cmd(dataset: DatasetOpt = None) -> None:
+    """Backtest the forecasters, forecast 14 days ahead, and score the anomaly detector."""
+    from zap.forecast.run import run_all
+
+    settings = get_settings()
+    label = _dataset(dataset)
+    db_path = settings.duckdb_path(label)
+    if not db_path.exists():
+        typer.echo(f"ERROR: no warehouse for dataset '{label}' ({db_path})", err=True)
+        raise typer.Exit(code=1)
+    report = run_all(db_path, settings.artifacts_dir)
+    for metric, result in report["metrics"].items():
+        typer.echo(f"{metric}: best model {result['best_model']}")
+        for model, scores in result["models"].items():
+            typer.echo(
+                f"  {model:15} national MAPE {scores['national_mape']:6.2f}%  "
+                f"cities {scores['cities_mean_mape']:6.2f}%  "
+                f"gain vs baseline {scores['mape_gain_vs_baseline_pct']:5.1f}%"
+            )
+    for name, result in report["anomalies"]["detectors"].items():
+        typer.echo(
+            f"{name}: precision {result['precision']}, recall {result['recall']}, "
+            f"{result['false_alarms_per_1000_normal_days']} false alarms per 1,000 normal days"
+        )
+    typer.echo(f"Report: {settings.artifacts_dir / 'forecast_backtest.json'}")
+
+
 @app.command("dq-report")
 def dq_report_cmd(
     dataset: DatasetOpt = None,

@@ -52,7 +52,7 @@ QUERIES: dict[str, tuple[str, str]] = {
 }
 
 
-def _model_seconds(run: DbtRun, unique_ids: set[str]) -> float:
+def model_seconds(run: DbtRun, unique_ids: set[str]) -> float:
     return round(
         sum(
             float(r.get("execution_time") or 0)
@@ -63,7 +63,7 @@ def _model_seconds(run: DbtRun, unique_ids: set[str]) -> float:
     )
 
 
-def _dbt_elapsed(run: DbtRun) -> float:
+def dbt_elapsed(run: DbtRun) -> float:
     return round(float(run.run_results.get("elapsed_time") or 0.0), 3)
 
 
@@ -136,10 +136,10 @@ def _incremental_cycle(db_path: Path, project: Path, holdout_days: int) -> dict[
     fact_ids = {uid for _, uid in FACTS.values()}
     return {
         "new_rows": held,
-        "full_refresh_dbt_s": _dbt_elapsed(full),
-        "incremental_dbt_s": _dbt_elapsed(inc),
-        "facts_full_refresh_s": _model_seconds(full, fact_ids),
-        "facts_incremental_s": _model_seconds(inc, fact_ids),
+        "full_refresh_dbt_s": dbt_elapsed(full),
+        "incremental_dbt_s": dbt_elapsed(inc),
+        "facts_full_refresh_s": model_seconds(full, fact_ids),
+        "facts_incremental_s": model_seconds(inc, fact_ids),
         "wall_full_refresh_s": full.seconds,
         "wall_incremental_s": inc.seconds,
         "result_correct": int(expected) == int(actual),

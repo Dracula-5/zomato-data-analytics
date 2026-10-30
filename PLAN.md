@@ -318,7 +318,7 @@ Each artifact records its run timestamp, git SHA, target (duckdb or snowflake), 
 | R7 | The project sits inside OneDrive, which would sync venvs, Parquet and DuckDB files (GBs) and can lock open DuckDB files | Put the repo outside OneDrive (D4) |
 | R8 | Windows: no `make`, `terraform` or `aws` CLI; the console is cp1252 (it already crashed one profiling run); DuckDB is single-writer | winget installs (D6); `PYTHONUTF8=1` everywhere; the Makefile is a thin wrapper over the `zap` CLI so commands also work without make; the dashboard opens DuckDB read-only |
 | R9 | Airflow 3 removed the old `sla=` feature; Deadline Alerts (3.1) is new | Use Deadline Alerts if they are stable in the pinned version. Otherwise `execution_timeout` + callbacks + an explicit `sla_check` task. ADR records the choice |
-| R10 | Snowflake is phasing out password-only sign-in; the trial lasts 30 days; masking policies need Enterprise edition; the S3 region must match | Key-pair auth for the service user; **sign up only when M5 starts**; choose Enterprise + AWS + the same region as the bucket (ap-south-1 Mumbai suggested) |
+| R10 | Snowflake is phasing out password-only sign-in; the trial lasts 30 days; masking policies need Enterprise edition; the S3 region must match | Key-pair auth for the service user; **sign up only when M5 starts**; choose Enterprise + AWS + the same region as the bucket. *M5 outcome:* the account is in ap-southeast-7 (Thailand), so the bucket is too (an opt-in AWS region) |
 | R11 | Unexpected cloud or LLM bills | XS warehouse, auto-suspend 60 s, resource monitor; S3 well under the free-tier size; LLM hard budget cap, cache, `SAMPLE_N`; I warn before every paid step |
 | R12 | LLM non-determinism makes eval numbers drift | temperature 0, cached responses, model and date stamped on every result |
 | R13 | I author the golden and eval sets, which can bias the evaluation | Labels are rule-derived where possible; you review the sets; METRICS.md discloses who authored them |
@@ -363,7 +363,7 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 - [x] M2 dbt (DuckDB), governance, GX, benchmarks
 - [x] M3 Streamlit dashboard (screenshots captured with the others in M11)
 - [x] M4 Airflow (local)
-- [ ] M5 Cloud: Terraform, S3, Snowflake
+- [x] M5 Cloud: Terraform, S3, Snowflake
 - [ ] M6 Forecasting + anomalies
 - [ ] M7 Knowledge graph
 - [ ] M8 GenAI + evals

@@ -98,8 +98,7 @@ def test_no_raw_email_or_password_reaches_marts(
         assert hits == 0, f"raw email in marts.{table}.{column}"
     ((pw,),) = _sql(
         settings,
-        "select count(*) from information_schema.columns "
-        "where column_name = 'password' and table_schema <> 'raw'",
+        "select count(*) from information_schema.columns where lower(column_name) = 'password'",
     )
     assert pw == 0
 
@@ -181,7 +180,7 @@ def test_data_dictionary_covers_models_and_classification(
     text = out.read_text(encoding="utf-8")
     assert "### marts.fct_orders" in text and "### raw.users" in text
     assert "| email_masked | VARCHAR | pii |" in text
-    assert "| password | VARCHAR | secret |" in text
+    assert "| password |" not in text  # dropped at ingestion, so not in any table
 
 
 def test_dq_report_cli_rebuilds_the_same_report(

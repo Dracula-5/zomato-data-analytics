@@ -1,6 +1,9 @@
 -- One row per customer: everyone who ordered, plus registered users who never ordered.
 -- PII policy for marts: name and other personal attributes are excluded; email appears only
 -- masked (for display) and as a salted hash (for joining). Raw values stay in staging.
+-- On Snowflake, a masking policy also hides both columns from every role but ZAP_DEPLOYER.
+{{ config(post_hook="{{ apply_masking(['email_masked', 'email_hash']) }}") }}
+
 with ordering as (
     select
         customer_id,

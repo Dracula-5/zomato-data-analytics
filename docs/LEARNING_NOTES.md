@@ -625,3 +625,121 @@ of a full rebuild.
 a day and compared, and checked day-by-day loads against a one-shot load and a full
 rebuild. Those comparisons found two late-arriving-data bugs (one in sampling, one in
 an incremental dbt model) that no unit test had caught. Each now has a regression test."
+
+## M5: The cloud path (Terraform, S3, Snowflake, dbt, Airflow)
+
+### What runs where
+
+```
+lake/ (Parquet) --boto3--> S3 --COPY INTO--> Snowflake RAW --dbt--> STAGING, MARTS, GOVERNANCE
+```
+
+The same contracts and the same dbt project drive both engines. Only `macros/cross_db.sql`
+knows they differ. `src/zap/cloud/` holds the cloud code and imports its SDKs inside each
+command, so `make local` needs no cloud packages or credentials.
+
+### Keyless access, and why Terraform runs twice
+
+Snowflake reads S3 by assuming an IAM role, so no AWS key is stored in Snowflake. There's a
+chicken-and-egg problem: the storage integration needs the role's ARN, but the role's trust
+policy needs a user and external ID that Snowflake generates only when the integration is
+created. So: Terraform creates the role with a placeholder trust, `zap cloud setup` creates
+the integration and saves its two values, and Terraform runs again to narrow the trust.
+The integration uses `IF NOT EXISTS` because re-creating it changes those values.
+
+### Least privilege, three times
+
+- **AWS:** `zomato-terraform` can touch only `zomato-ai-dp-*` buckets and `zomato-snowflake-*`
+  roles. Terraform refuses any account but the one in `terraform.tfvars`. Every tool names
+  the `zomato` profile, so stray `AWS_*` keys in the environment are ignored.
+- **Snowflake user:** `ZAP_SVC` is `TYPE = SERVICE`: key pair only, no password, no web UI.
+- **Snowflake grants:** future grants normally need the account-wide `MANAGE GRANTS`. Managed
+  access schemas let the schema owner set them instead. It must be set at `CREATE`: turning
+  it on later needs `MANAGE GRANTS` too, which is how this was found.
+
+### PII: what each layer does
+
+| Layer | Protects against |
+|---|---|
+| `secret` columns dropped at ingestion | passwords reaching the lake, S3 or any warehouse |
+| masked email and salted hash in marts | raw emails in analytics tables |
+| masking policy (Enterprise) | analysts seeing even those two columns |
+| `ZAP_ANALYST` has no grant on `RAW` or `STAGING` | reading raw PII at all |
+
+dbt rebuilds tables, which removes a masking policy, so a post-hook re-applies it each build.
+
+### Results (from `artifacts/cloud/` and `artifacts/bench/snowflake_full/`, 2026-10-30 UTC)
+
+Full data: all 7 source files, unsampled, from the synthetic-looking source (see M2b).
+X-Small warehouse.
+
+| Check | Result |
+|---|---|
+| S3 lake | 2,740 files, 0.533 GB (a further 2,740 files, 0.061 GB, for the 5% sample) |
+| `COPY INTO` all 7 tables | 35,098,217 rows in 58.7 s |
+| `dbt build --full-refresh` | 88/88 passed in 44.9 s (DuckDB on this laptop: 88/88 in 93.7 s) |
+| Snowflake vs DuckDB | 16/16 tables identical across 424 measures, tolerance 1e-9 |
+| Analyst role | 7/7 checks passed; readable emails: deployer 100,000 rows, analyst 0 |
+| Airflow, 2 days through the scheduler | 2/2 runs, 14/14 tasks on the first try, about 345 s each* |
+| Files sent to S3 by that replay | 3 of 2,740 |
+| Snowflake vs DuckDB after the replay | still 16/16 |
+
+\* Docker VM clock caveat as in M4: treat as approximate.
+
+The replay re-processed days already in the warehouse, so "still 16/16" is the idempotency
+proof on Snowflake.
+
+**Credits used: not measured.** `ZAP_DEPLOYER` can't read metering views or resource monitors.
+Snowsight shows them to ACCOUNTADMIN under Admin → Cost Management.
+
+### Two benchmarks that didn't flatter the project
+
+**Incremental vs full refresh (median of 3 cycles, 43,420 new rows):**
+
+| | Full refresh | Incremental | Saved |
+|---|---|---|---|
+| whole `dbt run` | 31.3 s | 29.0 s | 7.3% |
+| the 3 fact models | 23.1 s | 18.8 s | 18.9% |
+
+Fact totals were identical after all 3 cycles. The saving is small for two measured reasons:
+the fact models are only about 19 s of the run, because every other model rebuilds either
+way, and an X-Small warehouse rebuilds 10M rows in about 23 s anyway. Incremental models pay
+off when the rebuild is the slow part, and on this data it isn't.
+
+**Clustering (same rows, result cache off, median of 5):**
+
+| Layout | Partitions scanned | Median time |
+|---|---|---|
+| as built by dbt | 26 of 26 | 262 ms |
+| shuffled | 24 of 24 | 303 ms |
+| sorted by `order_date` | 2 of 21 | 263 ms |
+
+Sorting cut the partitions scanned by 90% and saved no measurable time: at this size the scan
+is too small to matter next to the rest of the query. **Decision: no `cluster_by`.** Automatic
+clustering costs credits for a gain that doesn't show here. It's worth revisiting if the table
+grows by an order of magnitude. The times include the network round trip from this laptop.
+
+### What went wrong (and what each one teaches)
+
+1. **Comparing two engines found a real numbers bug that 88 passing tests didn't.** Both
+   builds were green, but 3 of 16 tables differed. On 2025-01-19, 753 of 12,314 orders were
+   cancelled: 0.06114991, which is 0.0611. Snowflake said 0.0612. `NUMBER` division kept 6
+   decimals (0.061150), and rounding that again went the wrong way, so it **rounded twice**.
+   Fix: `ratio`, `round_avg` and `round_double` in `cross_db.sql` divide and average in
+   `DOUBLE` and round in `DECIMAL`, and every rounded column uses them. A singular dbt test
+   runs on both engines. *Green tests prove your rules hold, not that your numbers are right.*
+2. **My first comparison was too loose to see all of it.** A tolerance of 1e-6 on a large sum
+   hides many rows each off by 0.0001, and opposite errors cancel in a plain sum. It's now
+   1e-9, with a sum of squares added for each numeric column.
+3. **The PII salt never reached dbt.** The macro fell back to the public `local-dev-salt`
+   because nothing passed `.env` to dbt, which doesn't read that file. A hash with a known
+   salt can be reversed with a list of emails. Settings now hold it as a secret, `dbt_env`
+   passes it on, and `zap cloud dbt` refuses to run with the fallback.
+4. **A role test can pass for the wrong reason, in two ways.** Snowflake's default
+   `DEFAULT_SECONDARY_ROLES = ALL` leaves other roles active after `USE ROLE`, so the check
+   sets `USE SECONDARY ROLES NONE`. And "does not exist" looks the same as "not authorized",
+   so a typo would count as denied. Every statement runs as the deployer first, and only
+   authorization errors count as denied.
+5. **Going from sample to full needs `--full-refresh`.** Incremental models held sample rows,
+   and a normal run merges only recent days on top. The snapshot was safe because restaurants
+   aren't sampled: its row count was the same on both datasets.

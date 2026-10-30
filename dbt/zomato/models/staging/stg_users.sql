@@ -1,5 +1,5 @@
 -- One row per registered user. The plain-text `password` column (classified `secret`)
--- is deliberately never selected, so it cannot reach any model downstream.
+-- never reaches this layer: ingestion drops it, so no copy exists in the lake or warehouse.
 -- Source headers have capitals and spaces ("Marital Status"); they are renamed here.
 with source as (
     select * from {{ source('raw', 'users') }}

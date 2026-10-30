@@ -46,6 +46,19 @@ jobs:
           name: test-reports
           path: artifacts/
 
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+
+      - name: Format, then validate without any cloud credentials
+        run: |
+          terraform -chdir=infra/terraform fmt -check -diff
+          terraform -chdir=infra/terraform init -backend=false -input=false
+          terraform -chdir=infra/terraform validate
+
   airflow-image:
     runs-on: ubuntu-latest
     steps:

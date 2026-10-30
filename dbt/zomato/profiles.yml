@@ -1,5 +1,5 @@
 # Credentials never live here: every value comes from an environment variable.
-# `zap dbt ...` sets DUCKDB_PATH for the selected dataset. Snowflake is added in M5.
+# `zap dbt ...` sets DUCKDB_PATH for the selected dataset; `zap cloud dbt ...` selects Snowflake.
 zomato:
   target: "{{ env_var('DBT_TARGET', 'duckdb') }}"
   outputs:
@@ -12,3 +12,15 @@ zomato:
       settings:
         memory_limit: "{{ env_var('DUCKDB_MEMORY_LIMIT', '6GB') }}"
         preserve_insertion_order: false
+    snowflake:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', 'not-set') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'ZAP_SVC') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'ZAP_DEPLOYER') }}"
+      # Key-pair sign-in: the private key file lives outside the repo.
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH', 'not-set') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'ZAP_XS') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'ZOMATO') }}"
+      schema: STAGING
+      threads: 4
+      query_tag: zomato-ai-data-platform

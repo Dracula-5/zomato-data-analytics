@@ -19,10 +19,9 @@ select
     cast(k.orders as bigint)                                        as orders,
     cast(k.delivered_orders as bigint)                              as delivered_orders,
     cast(k.gmv as bigint)                                           as gmv,
-    cast(round(k.gmv * 1.0 / nullif(k.delivered_orders, 0), 2) as double) as aov,
-    cast(round(k.cancelled_orders * 1.0 / k.orders, 4) as double)   as cancel_rate,
-    cast(round(k.sla_breaches * 1.0 / nullif(k.delivered_orders, 0), 4) as double)
-                                                                    as sla_breach_rate,
+    {{ ratio('k.gmv', 'nullif(k.delivered_orders, 0)', 2) }}        as aov,
+    {{ ratio('k.cancelled_orders', 'k.orders', 4) }}                as cancel_rate,
+    {{ ratio('k.sla_breaches', 'nullif(k.delivered_orders, 0)', 4) }} as sla_breach_rate,
     cast(k.active_customers as bigint)                              as active_customers
 from daily k
 inner join {{ ref('dim_date') }} d on k.order_date = d.date_day

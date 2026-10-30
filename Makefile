@@ -11,7 +11,8 @@ SAMPLE_PCT ?= 5
 
 .PHONY: help setup lint format typecheck test check hooks fixtures info \
         drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve bench app \
-        airflow-bootstrap airflow-up airflow-down airflow-replay airflow-smoke
+        airflow-bootstrap airflow-up airflow-up-snowflake airflow-down airflow-replay \
+        airflow-replay-snowflake airflow-smoke \n        cloud-keys cloud-whoami cloud-infra cloud-setup cloud-upload cloud-load cloud-dbt cloud-check cloud-bench cloud-destroy
 
 help: ## Show this list
 	@$(RUN) python scripts/make_help.py $(firstword $(MAKEFILE_LIST))
@@ -82,6 +83,7 @@ app: ## Open the Streamlit dashboard at http://localhost:8501
 
 # --- Airflow (Docker) --------------------------------------------------------------------
 COMPOSE_AF := docker compose -f airflow/docker-compose.yml
+COMPOSE_SF := $(COMPOSE_AF) -f airflow/docker-compose.snowflake.yml
 AF_DATASET := airflow_5pct
 AF_CUTOFF := 2026-06-23
 
@@ -102,6 +104,53 @@ airflow-replay: ## Run the DAG through the scheduler for FROM..TO (default: all 
 		--from-date $(or $(FROM),2026-06-24) --to-date $(or $(TO),2026-06-30) \
 		--max-active-runs 1 --reprocess-behavior completed
 
+airflow-up-snowflake: ## Start Airflow with AWS and Snowflake access (see airflow/docker-compose.snowflake.yml)
+	$(COMPOSE_SF) up -d --build
+
+airflow-replay-snowflake: ## Run zomato_daily_snowflake for FROM..TO. Uses S3 and Snowflake credits
+	$(COMPOSE_SF) exec airflow-scheduler airflow dags unpause zomato_daily_snowflake
+	$(COMPOSE_SF) exec airflow-scheduler airflow backfill create --dag-id zomato_daily_snowflake \
+		--from-date $(or $(FROM),2026-06-29) --to-date $(or $(TO),2026-06-30) \
+		--max-active-runs 1 --reprocess-behavior completed
+
 airflow-smoke: ## Trigger alerts_smoke: one deadline alert + one failure alert -> artifacts/airflow/alerts.jsonl
 	$(COMPOSE_AF) exec airflow-scheduler airflow dags unpause alerts_smoke
 	$(COMPOSE_AF) exec airflow-scheduler airflow dags trigger alerts_smoke
+
+# --- Cloud (M5): see docs/CLOUD_SETUP.md. These targets cost money, a little. ---------------
+TF ?= terraform
+TF_DIR := infra/terraform
+DATASET ?= full
+
+cloud-keys: ## Create the Snowflake key pair and fill in the bootstrap SQL (free)
+	$(RUN) zap cloud keys
+
+cloud-whoami: ## Show which AWS and Snowflake identities are in use (free, changes nothing)
+	$(RUN) zap cloud whoami
+
+cloud-infra: ## Terraform: create or update the S3 bucket and IAM role, then save the outputs
+	$(TF) -chdir=$(TF_DIR) init -input=false
+	$(TF) -chdir=$(TF_DIR) apply -input=false
+	$(TF) -chdir=$(TF_DIR) output -json > artifacts/cloud/terraform_output.json
+
+cloud-setup: ## Snowflake: integration, schemas, stage, grants. Re-run cloud-infra afterwards
+	$(RUN) zap cloud setup
+
+cloud-upload: ## Mirror lake/$(DATASET) to S3 (only changed files)
+	$(RUN) zap cloud upload --dataset $(DATASET)
+
+cloud-load: ## COPY the S3 lake into Snowflake RAW tables
+	$(RUN) zap cloud load --dataset $(DATASET)
+
+cloud-dbt: ## dbt build on Snowflake
+	$(RUN) zap cloud dbt build
+
+cloud-check: ## Prove ZAP_ANALYST's limits and PII masking, then compare Snowflake with DuckDB
+	$(RUN) zap cloud check-access
+	$(RUN) zap cloud compare --dataset $(DATASET)
+
+cloud-bench: ## Snowflake benchmarks: incremental vs full refresh, clustering. Uses credits
+	$(RUN) zap cloud bench all --dataset $(DATASET)
+
+cloud-destroy: ## Delete the bucket, its data and the IAM role, so AWS stops charging
+	$(TF) -chdir=$(TF_DIR) destroy -input=false

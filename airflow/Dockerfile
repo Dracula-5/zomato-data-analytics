@@ -18,7 +18,7 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/zap-venv \
 
 WORKDIR /opt/zap-build
 COPY --chown=airflow:0 pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-install-project --no-default-groups --group dbt --group quality \
+RUN uv sync --frozen --no-install-project --no-default-groups --group dbt --group quality --group cloud \
     && rm -rf /home/airflow/.cache/uv
 
 WORKDIR /opt/airflow

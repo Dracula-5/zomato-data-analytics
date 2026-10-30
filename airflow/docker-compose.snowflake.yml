@@ -1,0 +1,14 @@
+# Opt-in cloud access for zomato_daily_snowflake, added on top of docker-compose.yml by
+# `make airflow-up-snowflake`. Only the scheduler gets it: LocalExecutor runs tasks there.
+# Credentials stay on the host and are mounted read-only, so they never enter the image.
+services:
+  airflow-scheduler:
+    environment:
+      AWS_CONFIG_FILE: /run/zap/aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /run/zap/aws/credentials
+      SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT:?set SNOWFLAKE_ACCOUNT in airflow/.env}
+      SNOWFLAKE_PRIVATE_KEY_PATH: /run/zap/snowflake/zap_svc_rsa_key.p8
+      PII_HASH_SALT: ${PII_HASH_SALT:?set PII_HASH_SALT in airflow/.env}
+    volumes:
+      - ${AWS_HOST_DIR:?set AWS_HOST_DIR in airflow/.env}:/run/zap/aws:ro
+      - ${SNOWFLAKE_KEY_HOST_DIR:?set SNOWFLAKE_KEY_HOST_DIR in airflow/.env}:/run/zap/snowflake:ro

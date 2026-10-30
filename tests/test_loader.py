@@ -53,7 +53,7 @@ def test_missing_lake_table_becomes_empty_table_with_contract_schema(
     con = duckdb.connect(str(db), read_only=True)
     cols = [r[0] for r in con.execute("describe raw.users").fetchall()]
     assert cols == list(raw_columns(contracts["users"]))
-    assert "password" in cols  # raw keeps the source shape; staging drops it
+    assert "password" not in cols  # a secret column stops at ingestion
 
 
 def test_partition_load_is_idempotent(

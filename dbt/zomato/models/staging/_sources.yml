@@ -169,12 +169,6 @@ sources:
       data_type: VARCHAR
       meta:
         classification: pii
-    - name: password
-      description: Account password as stored in the source (plain text). Never propagated past the raw
-        layer; dropped in staging.
-      data_type: VARCHAR
-      meta:
-        classification: secret
     - name: Age
       description: Customer age in years.
       data_type: VARCHAR

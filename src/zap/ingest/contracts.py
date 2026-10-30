@@ -74,7 +74,14 @@ class Contract(BaseModel):
 
     @property
     def column_names(self) -> list[str]:
+        """Every column of the source file, as the drift check expects it."""
         return [c.name for c in self.columns]
+
+    @property
+    def stored_columns(self) -> list[Column]:
+        """Columns that may leave the source file. `secret` ones stop at ingestion, so no
+        copy ever reaches the lake, S3 or a warehouse: nothing there needs protecting."""
+        return [c for c in self.columns if c.classification != "secret"]
 
     def depends_on(self) -> set[str]:
         """Tables that must be written to the lake before this one."""

@@ -24,6 +24,10 @@ def _fresh_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator
         "SAMPLE_PCT",
         "CONTRACTS_DIR",
         "S3_BUCKET",
+        "AWS_REGION",
+        "PII_HASH_SALT",
+        "SNOWFLAKE_ACCOUNT",
+        "SNOWFLAKE_PRIVATE_KEY_PATH",
         "OPENAI_API_KEY",
     ):
         monkeypatch.delenv(var, raising=False)

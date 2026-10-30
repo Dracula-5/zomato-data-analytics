@@ -95,7 +95,7 @@ def parquet_glob(lake_dir: Path, contract: Contract) -> Path:
 
 def _select_list(contract: Contract, run_id: str, loaded_at: str) -> str:
     cols = []
-    for c in contract.columns:
+    for c in contract.stored_columns:
         ident = quote_ident(c.name)
         cols.append(ident if c.type == "VARCHAR" else f"CAST({ident} AS {c.type}) AS {ident}")
     cols += [

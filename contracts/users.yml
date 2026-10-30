@@ -20,8 +20,8 @@ columns:
     classification: pii
   - name: password
     description: >-
-      Account password as stored in the source (plain text). Never propagated past the raw
-      layer; dropped in staging.
+      Account password as stored in the source (plain text). Dropped at ingestion: it is
+      never written to the lake, S3 or any warehouse.
     classification: secret
   - name: "Age"
     description: Customer age in years.

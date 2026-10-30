@@ -45,20 +45,27 @@ def _row_hash(columns: list[tuple[str, str]]) -> str:
     return f"hash({', '.join(parts)})"
 
 
+def table_columns(
+    con: duckdb.DuckDBPyConnection, schemas: tuple[str, ...]
+) -> dict[tuple[str, str], list[tuple[str, str]]]:
+    """{(schema, table): [(column, type), ...]}, sorted by schema and table."""
+    tables: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for schema, table, column, dtype in con.execute(
+        "SELECT table_schema, table_name, column_name, data_type "
+        "FROM information_schema.columns WHERE list_contains(?, table_schema) "
+        "ORDER BY table_schema, table_name, ordinal_position",
+        [list(schemas)],
+    ).fetchall():
+        tables.setdefault((schema, table), []).append((column, dtype))
+    return dict(sorted(tables.items()))
+
+
 def fingerprint(db_path: Path, schemas: tuple[str, ...] = ("marts",)) -> dict[str, dict[str, Any]]:
     """{"schema.table": {"rows", "checksum", "columns"}} for every table in `schemas`."""
     con = duckdb.connect(str(db_path), read_only=True, config={"python_enable_replacements": False})
     try:
-        tables: dict[tuple[str, str], list[tuple[str, str]]] = {}
-        for schema, table, column, dtype in con.execute(
-            "SELECT table_schema, table_name, column_name, data_type "
-            "FROM information_schema.columns WHERE list_contains(?, table_schema) "
-            "ORDER BY table_schema, table_name, ordinal_position",
-            [list(schemas)],
-        ).fetchall():
-            tables.setdefault((schema, table), []).append((column, dtype))
         result: dict[str, dict[str, Any]] = {}
-        for (schema, table), columns in sorted(tables.items()):
+        for (schema, table), columns in table_columns(con, schemas).items():
             keep = business_columns(columns)
             rows, checksum = con.execute(
                 f"SELECT count(*), coalesce(sum({_row_hash(keep)}::HUGEINT), 0) "  # noqa: S608 - quoted via sqlutil

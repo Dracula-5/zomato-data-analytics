@@ -41,8 +41,22 @@ class Settings(BaseSettings):
 
     # Cloud and LLM (optional until the milestones that need them)
     s3_bucket: str | None = None
-    aws_region: str = "ap-south-1"
+    # Same region as the Snowflake account, so S3 -> Snowflake has no transfer charge.
+    aws_region: str = "ap-southeast-7"
+    # A named profile, never ambient keys: an explicit profile wins over AWS_* variables,
+    # so another project's keys left in the environment can't be used by accident.
+    aws_profile: str = "zomato"
+    # e.g. `ab12345.ap-southeast-7.aws`. The password-less private key stays outside the repo.
+    snowflake_account: str | None = None
+    snowflake_user: str = "ZAP_SVC"
+    snowflake_role: str = "ZAP_DEPLOYER"
+    snowflake_warehouse: str = "ZAP_XS"
+    snowflake_database: str = "ZOMATO"
+    snowflake_private_key_path: Path = Path.home() / ".snowflake" / "zap_svc_rsa_key.p8"
     openai_api_key: SecretStr | None = None
+    # Stops email hashes being reversed with a list of known emails. dbt falls back to a
+    # public dev value when unset, which is fine for local work but refused on Snowflake.
+    pii_hash_salt: SecretStr | None = None
 
     def duckdb_path(self, dataset: str) -> Path:
         """Warehouse file for a dataset label, e.g. `warehouse/sample_5pct.duckdb`."""

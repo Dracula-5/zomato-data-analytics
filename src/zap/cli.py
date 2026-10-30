@@ -9,6 +9,7 @@ import duckdb
 import typer
 
 from zap.bench import bench_incremental, bench_queries, write_bench
+from zap.cloud.commands import cloud_app
 from zap.config import get_settings
 from zap.dbt_runner import dbt_target_dir, run_dbt
 from zap.dbt_sources import write_sources
@@ -26,6 +27,7 @@ from zap.warehouse.fingerprint import diff as fingerprint_diff
 from zap.warehouse.fingerprint import fingerprint
 
 app = typer.Typer(help="Zomato AI Data Platform CLI.", no_args_is_help=True)
+app.add_typer(cloud_app, name="cloud")
 
 SourceOpt = Annotated[Path | None, typer.Option(help="CSV folder (default: DATA_DIR).")]
 TablesOpt = Annotated[

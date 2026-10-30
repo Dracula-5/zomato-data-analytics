@@ -62,3 +62,19 @@
 {%- endmacro %}
 {% macro default__materialized_cte() -%}{%- endmacro %}
 {% macro duckdb__materialized_cte() -%}materialized{%- endmacro %}
+
+{#- Rounding that gives the same answer on both warehouses, as a DOUBLE.
+    Snowflake's NUMBER division keeps about 6 decimals, so 753 * 1.0 / 12314 becomes 0.06115
+    and then rounds to 0.0612, though the true 0.06114991 rounds to 0.0611. So: divide and
+    average in DOUBLE, then do the final round in DECIMAL, where ties are exact. -#}
+{% macro round_double(expr, digits) -%}
+    cast(round(cast({{ expr }} as decimal(20, 10)), {{ digits }}) as double)
+{%- endmacro %}
+
+{% macro ratio(numerator, denominator, digits) -%}
+    {{ round_double('cast(' ~ numerator ~ ' as double) / ' ~ denominator, digits) }}
+{%- endmacro %}
+
+{% macro round_avg(expr, digits) -%}
+    {{ round_double('avg(cast(' ~ expr ~ ' as double))', digits) }}
+{%- endmacro %}

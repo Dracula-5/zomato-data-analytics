@@ -5,11 +5,11 @@ with orders as (
         count(*)                                                              as orders,
         sum(case when is_delivered then 1 else 0 end)                         as delivered_orders,
         sum(case when is_delivered then sales_amount else 0 end)              as gmv,
-        round(avg(case when is_cancelled then 1.0 else 0.0 end), 4)           as cancel_rate,
-        round(avg(customer_rating), 2)                                        as avg_customer_rating,
-        round(avg(delivery_time_min), 1)                                      as avg_delivery_min,
+        {{ round_avg('case when is_cancelled then 1.0 else 0.0 end', 4) }}    as cancel_rate,
+        {{ round_avg('customer_rating', 2) }}                                 as avg_customer_rating,
+        {{ round_avg('delivery_time_min', 1) }}                               as avg_delivery_min,
         percentile_cont(0.9) within group (order by delivery_time_min)        as p90_delivery_min,
-        round(avg(case when is_sla_breach then 1.0 when is_delivered then 0.0 end), 4)
+        {{ round_avg('case when is_sla_breach then 1.0 when is_delivered then 0.0 end', 4) }}
                                                                               as sla_breach_rate,
         min(order_date)                                                       as first_order_date,
         max(order_date)                                                       as last_order_date
@@ -21,7 +21,7 @@ reviews as (
     select
         restaurant_id,
         count(*)                                                              as reviews,
-        round(avg(rating), 2)                                                 as avg_review_rating
+        {{ round_avg('rating', 2) }}                                          as avg_review_rating
     from {{ ref('fct_reviews') }}
     group by restaurant_id
 )
@@ -37,7 +37,7 @@ select
     o.orders,
     o.delivered_orders,
     o.gmv,
-    round(o.gmv * 1.0 / nullif(o.delivered_orders, 0), 2)                     as aov,
+    {{ ratio('o.gmv', 'nullif(o.delivered_orders, 0)', 2) }}                  as aov,
     o.cancel_rate,
     o.avg_customer_rating,
     o.avg_delivery_min,

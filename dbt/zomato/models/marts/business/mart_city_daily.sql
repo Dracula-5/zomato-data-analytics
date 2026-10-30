@@ -25,8 +25,8 @@ select
     cast(cancelled_orders as bigint)                              as cancelled_orders,
     cast(refunded_orders as bigint)                               as refunded_orders,
     cast(gmv as bigint)                                           as gmv,
-    cast(round(gmv * 1.0 / nullif(delivered_orders, 0), 2) as double) as aov,
-    cast(round(cancelled_orders * 1.0 / orders, 4) as double)     as cancel_rate,
-    cast(round(discount * 1.0 / nullif(subtotal, 0), 4) as double) as discount_rate,
+    {{ ratio('gmv', 'nullif(delivered_orders, 0)', 2) }}          as aov,
+    {{ ratio('cancelled_orders', 'orders', 4) }}                  as cancel_rate,
+    {{ ratio('discount', 'nullif(subtotal, 0)', 4) }}             as discount_rate,
     cast(active_customers as bigint)                              as active_customers
 from daily

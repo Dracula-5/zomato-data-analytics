@@ -47,14 +47,27 @@ def test_layout_dimensions_single_file_facts_daily_partitions(
 def test_columns_are_contract_plus_lineage_without_index(
     full_lake: tuple[Path, lake.IngestManifest], contracts: dict[str, Contract]
 ) -> None:
-    import duckdb
-
     out, _ = full_lake
     for table, contract in contracts.items():
         cols = duckdb.connect().execute(f"select * from {parquet(out / 'raw' / table)} limit 0")
         names = [d[0] for d in cols.description]
         extra = [contract.partition_by] if contract.partition_lookup else []
-        assert names == contract.column_names + LINEAGE + extra, table
+        stored = [c.name for c in contract.stored_columns]
+        assert names == stored + LINEAGE + extra, table
+
+
+def test_secret_columns_never_reach_the_lake(
+    full_lake: tuple[Path, lake.IngestManifest], fixture_data: tuple[Path, FixtureResult]
+) -> None:
+    out, _ = full_lake
+    assert "password" in (fixture_data[0] / "users.csv").read_text(encoding="utf-8").splitlines()[0]
+    con = duckdb.connect()
+    cols = [
+        d[0] for d in con.execute(f"select * from {parquet(out / 'raw' / 'users')}").description
+    ]
+    assert "password" not in cols
+    for file in (out / "raw" / "users").rglob("*.parquet"):
+        assert b"password" not in file.read_bytes()  # not even in the Parquet schema
 
 
 def test_fact_types_are_enforced_and_partition_column_kept(

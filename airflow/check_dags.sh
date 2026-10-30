@@ -14,4 +14,5 @@ echo "$errors"
 
 dags=$(airflow dags list -o plain | awk 'NR > 1 {print $1}' | sort | xargs)
 echo "parsed DAGs: $dags"
-[ "$dags" = "alerts_smoke zomato_daily" ] || { echo "expected: alerts_smoke zomato_daily"; exit 1; }
+expected="alerts_smoke zomato_daily zomato_daily_snowflake"
+[ "$dags" = "$expected" ] || { echo "expected: $expected"; exit 1; }

@@ -50,7 +50,7 @@ class LoadResult:
 
 def raw_columns(contract: Contract) -> dict[str, str]:
     """Column name to SQL type, in lake order: contract columns, lineage, lookup partition."""
-    cols = {c.name: c.type for c in contract.columns} | LINEAGE_TYPES
+    cols = {c.name: c.type for c in contract.stored_columns} | LINEAGE_TYPES
     if contract.partition_lookup and contract.partition_by:
         cols[contract.partition_by] = "DATE"
     return cols

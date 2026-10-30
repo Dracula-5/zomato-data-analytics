@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from zap.config import get_settings
+
 
 @dataclass
 class DbtRun:
@@ -46,7 +48,7 @@ def dbt_target_dir(db_path: Path, project_dir: Path) -> Path:
 
 def dbt_env(db_path: Path, project_dir: Path) -> dict[str, str]:
     target = dbt_target_dir(db_path, project_dir)
-    return {
+    env = {
         **os.environ,
         "DUCKDB_PATH": str(db_path.resolve()),
         "DBT_PROFILES_DIR": str(project_dir.resolve()),
@@ -54,6 +56,10 @@ def dbt_env(db_path: Path, project_dir: Path) -> dict[str, str]:
         "DBT_LOG_PATH": str(target / "logs"),
         "PYTHONUTF8": "1",
     }
+    salt = get_settings().pii_hash_salt
+    if salt is not None:  # may come from .env, which dbt itself never reads
+        env["PII_HASH_SALT"] = salt.get_secret_value()
+    return env
 
 
 def run_dbt(args: list[str], db_path: Path, project_dir: Path, capture: bool = False) -> DbtRun:

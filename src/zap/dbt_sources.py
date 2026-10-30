@@ -31,7 +31,7 @@ def _table(contract: Contract) -> dict[str, Any]:
             "data_type": c.type,
             "meta": {"classification": c.classification},
         }
-        for c in contract.columns
+        for c in contract.stored_columns
     ]
     columns += [
         {"name": "_batch_id", "description": "Ingestion run that wrote the row."},

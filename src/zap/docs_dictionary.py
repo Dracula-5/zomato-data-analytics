@@ -57,7 +57,7 @@ def render_dictionary(
         ]
         lines += [
             f"| {col.name} | {col.type} | {col.classification} | {_cell(col.description)} |"
-            for col in c.columns
+            for col in c.stored_columns
         ]
         lines.append("")
 

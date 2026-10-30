@@ -25,7 +25,7 @@ select
     c.rows_checked,
     coalesce(f.rows_failed, 0)                                           as rows_failed,
     case when c.rows_checked > 0
-        then round(100.0 * coalesce(f.rows_failed, 0) / c.rows_checked, 4) end as failed_pct,
+        then {{ ratio('100.0 * coalesce(f.rows_failed, 0)', 'c.rows_checked', 4) }} end as failed_pct,
     current_timestamp                                                    as checked_at
 from {{ ref('dq_rules') }} r
 inner join checked c on r.table_name = c.table_name

@@ -12,7 +12,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import duckdb
 import pandas as pd
 
 from zap.forecast import anomaly
@@ -26,6 +25,7 @@ from zap.forecast.backtest import (
 )
 from zap.forecast.features import Panel, load_panel
 from zap.forecast.models import forecast_all
+from zap.sqlutil import save_frames
 
 
 def next_days(panel: Panel, horizon: int = HORIZON) -> pd.DataFrame:
@@ -85,18 +85,6 @@ def detector_tables(detectors: dict[str, Any]) -> dict[str, pd.DataFrame]:
     return {"detector_scores": pd.DataFrame(scores), "event_recall": pd.DataFrame(recalls)}
 
 
-def _save_tables(db_path: Path, tables: dict[str, pd.DataFrame]) -> None:
-    con = duckdb.connect(str(db_path), config={"python_enable_replacements": False})
-    try:
-        con.execute("CREATE SCHEMA IF NOT EXISTS forecast")
-        for name, frame in tables.items():
-            con.register("frame_view", frame)
-            con.execute(f"CREATE OR REPLACE TABLE forecast.{name} AS SELECT * FROM frame_view")  # noqa: S608 - fixed names
-            con.unregister("frame_view")
-    finally:
-        con.close()
-
-
 def run_all(db_path: Path, artifacts_dir: Path, top_cities: int = 10) -> dict[str, Any]:
     panel = load_panel(db_path, top_cities)
     from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -119,8 +107,9 @@ def run_all(db_path: Path, artifacts_dir: Path, top_cities: int = 10) -> dict[st
     }
     real_flags = anomaly.flag_real_days(panel)
     report["anomalies"] = anomaly_report(panel, real_flags)
-    _save_tables(
+    save_frames(
         db_path,
+        "forecast",
         {
             "backtest": predictions,
             "accuracy": accuracy_table(predictions),

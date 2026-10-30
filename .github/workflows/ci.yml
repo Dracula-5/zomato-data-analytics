@@ -59,6 +59,29 @@ jobs:
           terraform -chdir=infra/terraform init -backend=false -input=false
           terraform -chdir=infra/terraform validate
 
+  graph:
+    runs-on: ubuntu-latest
+    env:
+      NEO4J_PASSWORD: ci-only-throwaway
+      NEO4J_TEST_URI: bolt://localhost:7687
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (exact versions from uv.lock)
+        run: uv sync --locked --all-groups
+
+      - name: Start Neo4j with GDS
+        run: |
+          echo "NEO4J_PASSWORD=$NEO4J_PASSWORD" > .env
+          make up-neo4j
+
+      - name: Real Cypher and GDS on the SYNTHETIC fixture
+        run: uv run pytest tests/test_graph_live.py --no-cov
+
   airflow-image:
     runs-on: ubuntu-latest
     steps:

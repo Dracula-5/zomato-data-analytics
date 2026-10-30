@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
+import pandas as pd
 
 
 def quote_ident(name: str) -> str:
@@ -30,3 +31,16 @@ def fetch_one(con: duckdb.DuckDBPyConnection, sql: str, params: list[Any] | None
     if row is None:
         raise RuntimeError(f"query returned no rows: {sql[:120]}")
     return row
+
+
+def save_frames(db_path: Path, schema: str, tables: dict[str, pd.DataFrame]) -> None:
+    """Publish results as tables in `schema`, replacing the last run's."""
+    con = duckdb.connect(str(db_path), config={"python_enable_replacements": False})
+    try:
+        con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+        for name, frame in tables.items():
+            con.register("frame_view", frame)
+            con.execute(f"CREATE OR REPLACE TABLE {schema}.{name} AS SELECT * FROM frame_view")  # noqa: S608 - fixed names
+            con.unregister("frame_view")
+    finally:
+        con.close()

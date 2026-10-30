@@ -45,6 +45,10 @@ forecast = [
     "lightgbm>=4.7.0",
     "statsmodels>=0.15.0",
 ]
+graph = [
+    "neo4j>=6.4.1",
+    "scipy>=1.14",
+]
 quality = [
     "great-expectations>=1.3",
 ]
@@ -55,7 +59,7 @@ build-backend = "uv_build"
 
 [tool.uv]
 # Every group is installed by default, so `uv run` never silently drops dbt or GX.
-default-groups = ["dev", "dbt", "quality", "app", "cloud", "forecast"]
+default-groups = ["dev", "dbt", "quality", "app", "cloud", "forecast", "graph"]
 
 [tool.uv.build-backend]
 module-name = "zap"
@@ -88,6 +92,7 @@ module = [
     "moto.*",
     "lightgbm.*",
     "statsmodels.*",
+    "scipy.*",
 ]
 ignore_missing_imports = true
 

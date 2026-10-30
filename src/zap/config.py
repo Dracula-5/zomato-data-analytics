@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     snowflake_warehouse: str = "ZAP_XS"
     snowflake_database: str = "ZOMATO"
     snowflake_private_key_path: Path = Path.home() / ".snowflake" / "zap_svc_rsa_key.p8"
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     # Stops email hashes being reversed with a list of known emails. dbt falls back to a
     # public dev value when unset, which is fine for local work but refused on Snowflake.

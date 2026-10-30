@@ -11,7 +11,7 @@ SAMPLE_PCT ?= 5
 
 .PHONY: help setup lint format typecheck test check hooks fixtures info \
         drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve forecast bench app \
-        airflow-bootstrap airflow-up airflow-up-snowflake airflow-down airflow-replay \
+        up-neo4j down-neo4j graph airflow-bootstrap airflow-up airflow-up-snowflake airflow-down airflow-replay \
         airflow-replay-snowflake airflow-smoke \n        cloud-keys cloud-whoami cloud-infra cloud-setup cloud-upload cloud-load cloud-dbt cloud-check cloud-bench cloud-destroy
 
 help: ## Show this list
@@ -83,6 +83,18 @@ bench: ## Benchmarks on the full dataset: incremental vs full refresh, fact vs m
 
 app: ## Open the Streamlit dashboard at http://localhost:8501
 	$(RUN) streamlit run app/Home.py
+
+# --- Knowledge graph (Docker) ------------------------------------------------------------
+COMPOSE_KG := docker compose --env-file .env -f docker/neo4j/docker-compose.yml
+
+up-neo4j: ## Start Neo4j + GDS on 127.0.0.1. Stop Airflow first: both together need too much RAM
+	$(COMPOSE_KG) up -d --wait
+
+down-neo4j: ## Stop Neo4j (keeps its data)
+	$(COMPOSE_KG) down
+
+graph: ## Load the 5% sample into Neo4j, run GDS and the queries, export to the dashboard
+	$(RUN) zap graph all --dataset sample_5pct
 
 # --- Airflow (Docker) --------------------------------------------------------------------
 COMPOSE_AF := docker compose -f airflow/docker-compose.yml

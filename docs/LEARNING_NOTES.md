@@ -869,3 +869,136 @@ would want to look at a few alerts a month, or raise the threshold and accept lo
    the browser's dark setting. Removing it fixed all pages, and a test now keeps it out. It only
    showed up by rendering the real page in both modes: *a passing test can't tell you a chart
    is unreadable.*
+
+## M7: The knowledge graph (Neo4j + GDS)
+
+### What's in the graph
+
+```
+(User)-[:ORDERED]->(Order)-[:FROM]->(Restaurant)-[:LOCATED_IN]->(Locality)-[:LOCATED_IN]->(City)
+                   (Order)-[:CONTAINS]->(FoodItem)<-[:SERVES]-(Restaurant)-[:HAS_CUISINE]->(Cuisine)
+(User)-[:REVIEWED]->(Restaurant)-[:SIMILAR_TO]->(Restaurant)
+```
+
+Orders are the 5% sample by user; restaurants, menus and dishes are complete. No names, emails
+or phone numbers of users are selected, and a test reads the real graph to confirm it.
+
+Neo4j 5.26.31 (the long-term support line) with GDS 2.13.13, the release published for it. Both
+are pinned exactly. Results are copied to a `kg` schema in DuckDB, so the dashboard needs no
+server.
+
+### Check for signal before building
+
+A graph can't find what isn't there, so the first step was plain SQL on the sample:
+
+| Check | Result | Meaning |
+|---|---|---|
+| Cities per customer | median 32, max 371 | nobody orders like this; behaviour is random |
+| Orders repeating a customer-restaurant pair | 0.2% | almost no loyalty to find |
+| Cancel-rate spread across restaurants | 0.0506, chance alone 0.0498 | no real differences |
+
+So customer behaviour is synthetic noise. Menus and restaurant names look real, so similarity
+was built from those. That decision is why the graph found anything at all.
+
+### The loader
+
+Batched `UNWIND ... MERGE` of 10,000 rows, with uniqueness constraints first, because MERGE
+without an index scans every node. After each step, the count in Neo4j is compared with the rows
+sent: a Cypher `MATCH` that finds nothing skips the row without any error, so a bad key would
+otherwise lose relationships silently.
+
+### Results (from `artifacts/graph_load.json` and `artifacts/graph_metrics.json`, 2026-10-30 UTC)
+
+| Measure | Result |
+|---|---|
+| Load | 1,014,522 nodes and 3,435,816 relationships in 244 s; 15/15 steps reconcile exactly |
+| GDS and all queries, including the full-data tests | 92 s, adding 10,199 `SIMILAR_TO` edges |
+| Restaurants with a menu | 12,013 of 148,541 (8.09%) |
+| Menu groups of 3 or more | 298, covering 1,724 restaurants |
+| Share of a group with the same name | 69.1% (18.4% if names are shuffled) |
+| Chains found (5+ outlets, 80%+ one name) | 71 |
+| Outlets with a menu in their chain's largest group | 80.1%, across 41 chains |
+| Groups with one menu under several brands | 11 |
+| PageRank vs plain order count (Spearman) | 0.98 |
+
+### What the graph found
+
+**Chains, without being told any names.** Louvain over menu overlap puts 25 of Domino's 25 outlets
+with a menu in one group, and likewise Pizza Hut (25 of 25) and KFC (23 of 23). Names never
+enter the algorithm, so they are a fair check of its groups.
+
+**What look like virtual brands.** Some groups had low name purity, which looked like a failure.
+They were the most interesting result: *LunchBox, The Good Bowl* and *Pure Veg Meals by
+Lunchbox*; *Sanskari Biryani, Badmash Biryani, The Almighty Biryani* and *Biryani Hazir Ho*.
+Different names, the same menu, usually in one or two cities. That pattern fits several brands
+run from shared kitchens, though the data can't prove who owns them. Matching on names could
+never find this link, because the names differ by design. It's the one thing here that a
+graph does and SQL on names doesn't.
+
+**PageRank added nothing.** It correlates 0.98 with counting orders, so the count would do. On a
+random ordering graph, centrality is just popularity. It's kept as a measured negative result.
+
+### Three things that looked like findings and weren't
+
+**1. "92% of order lines aren't on the restaurant's menu."** The first query said only 8.6% of
+lines matched, which looked like a serious integrity failure, and I said so. It was wrong. Only
+8.09% of restaurants have any menu data, and where one exists, 100.0% of lines are on it. Among
+restaurants with enough lines to judge, every one is at 0% or 100%, with nothing between. A
+missing value had been read as a wrong value. The test that exposed it was plain: bypass my
+models, join the raw tables, and look at the distribution rather than the average. *An average of
+a two-valued split describes nobody.*
+
+**2. "9,791 significant dish pairs."** `Jam Sandwich` with `Malabar Erachi Biriyani`, eight times,
+at 16,699 times the expected rate, surviving a strict correction. The statistics were right and
+the conclusion was wrong. Of the 11,334 pairs seen three or more times, 11,188 (98.7%) came from
+a single restaurant, bought by different customers. Restaurants without a menu sell from a small
+pool of dishes, so any two of them meet constantly. The test assumed dishes are independent across all orders, and that was the
+false part. This is **confounding**, and it's why the null hypothesis matters as much as the
+p-value. Tested within each restaurant, the count is **0**, on the sample and on 981,490 pairs
+from the full data. A regression test recreates the trap with synthetic data: the naive test
+flags most pairs, and the stratified test flags none.
+
+**3. "4,595 cancel-heavy restaurants."** That's how many pass p < 0.05 on the full data, and a
+ranked list of them would look alarming. But testing 148,103 restaurants at 5% would produce up to
+7,405 by chance alone. After false discovery rate correction: **0**, and 0 of 86,358 customers.
+
+### "Found nothing" needs a test that could have found something
+
+A result of zero is only meaningful if the test had the power to see a real effect. So synthetic
+outliers are planted at known strengths and run through the same test:
+
+| Share of planted outliers found | 2× | 3× | 5× |
+|---|---|---|---|
+| Restaurants, 5% sample | 0.2% | 2.1% | 48.4% |
+| Restaurants, full data | 3.1% | 29.8% | 83.6% |
+| Customers, full data | 10.6% | 50.0% | 90.0% |
+| Dish pairs, full data | 12.3% | 62.5% | 98.3% |
+
+The sample misses even restaurants cancelling three times as often, so its zero proves little,
+which is why these tests moved to the full data in DuckDB. Even there, the honest claim is
+narrow: *there's no sign of any restaurant or customer cancelling about 5× as often as the
+average*. A 2× effect could still hide, because 67 orders per restaurant can't show it.
+
+### What went wrong (and what each one teaches)
+
+1. **`--reset` ran out of memory, and only a real server showed it.** `DETACH DELETE` in batches
+   of 10,000 nodes sounds safe, but nodes aren't equal: `Chinese` alone has 36,464 restaurants,
+   so one batch can hold far more than 10,000 changes. Relationships are now deleted first, and
+   the error went away. A fake driver could never have found this, which is why a `graph` job
+   runs real Neo4j in CI.
+2. **PageRank stopped at its default 20 iterations without converging,** and said so in a field
+   that's easy to ignore. It's now limited to 100 and converges in 90.
+3. **GDS writes add relationships.** A second `nodeSimilarity.write` would double `SIMILAR_TO`,
+   so each run deletes the old ones first, and a live test proves two runs leave the same count.
+4. **`NEO4J_PASSWORD` can't be passed into the container.** The image turns every `NEO4J_*`
+   variable into a setting and refuses unknown ones. The health check uses another name.
+5. **An empty result still needs columns.** The tiny fixture has no matching menus, so a table
+   with no columns couldn't be saved. Only the live test on the fixture reached that path.
+6. **Two runs gave different numbers, for two separate reasons.** A `GROUP BY` returns rows in no
+   fixed order, so the same random seed planted outliers on different rows; an `ORDER BY` fixed
+   that. Then GDS itself varied, because Louvain only repeats exactly on one thread, and these
+   graphs are small enough that threads save nothing. Two runs now give identical reports.
+   *Comparing two runs of the same thing is a cheap test that finds real problems.*
+7. **The page said "run `make graph`" when results existed.** The dashboard defaults to the `full`
+   dataset, but the graph is built from the sample. Tests passed, because they only load one
+   dataset. It only showed up by opening the page as a reader would.

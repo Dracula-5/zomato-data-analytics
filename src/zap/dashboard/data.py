@@ -212,6 +212,62 @@ def real_anomalies(db: Path) -> pd.DataFrame:
     return query(db, "select * from forecast.anomalies order by order_date desc, scope, metric")
 
 
+def has_graph(db: Path) -> bool:
+    try:
+        query(db, "select 1 from kg.signal limit 1")
+    except duckdb.CatalogException:
+        return False
+    return True
+
+
+def graph_warehouse(chosen: Path) -> Path | None:
+    """The graph is built from one dataset, so fall back to whichever warehouse holds it."""
+    others = sorted(p for p in chosen.parent.glob("*.duckdb") if p != chosen)
+    return next((db for db in (chosen, *others) if has_graph(db)), None)
+
+
+def graph_signal(db: Path) -> dict[str, float]:
+    frame = query(db, "select measure, value from kg.signal")
+    return {str(k): float(v) for k, v in zip(frame["measure"], frame["value"], strict=True)}
+
+
+def graph_nodes(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.nodes order by nodes desc")
+
+
+def graph_relationships(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.relationships order by relationships desc")
+
+
+def graph_communities(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.communities order by restaurants desc, community")
+
+
+def graph_pairs(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.co_ordered order by both_orders desc, q")
+
+
+def graph_scores(db: Path) -> dict[str, float]:
+    frame = query(db, "select measure, value from kg.scores")
+    return {str(k): float(v) for k, v in zip(frame["measure"], frame["value"], strict=True)}
+
+
+def graph_outlier_tests(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.outlier_tests")
+
+
+def graph_outliers(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.cancel_outliers order by q")
+
+
+def graph_recommendations(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.recommendations order by score desc")
+
+
+def graph_top_restaurants(db: Path) -> pd.DataFrame:
+    return query(db, "select * from kg.top_restaurants order by pagerank desc")
+
+
 def latest_drift(log_path: Path) -> pd.DataFrame:
     """Most recent drift check per table, from the JSONL audit log."""
     if not log_path.exists():

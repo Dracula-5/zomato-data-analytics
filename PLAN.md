@@ -365,7 +365,7 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 - [x] M4 Airflow (local)
 - [x] M5 Cloud: Terraform, S3, Snowflake
 - [x] M6 Forecasting + anomalies
-- [ ] M7 Knowledge graph
+- [x] M7 Knowledge graph
 - [ ] M8 GenAI + evals
 - [ ] M9 Agentic Copilot + eval
 - [ ] M10 Recsys audit (+ GNN if chosen)

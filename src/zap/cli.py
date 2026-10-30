@@ -19,6 +19,7 @@ from zap.ingest import sample
 from zap.ingest.contracts import load_contracts
 from zap.ingest.drift import append_drift_log, check_drift
 from zap.ingest.lake import DriftError, ingest, new_run_id, write_manifest
+from zap.kg.commands import graph_app
 from zap.pipeline import PipelineError, run_local
 from zap.quality.gx_suite import GxReport, validate_lake, write_gx_report
 from zap.quality.report import build_report
@@ -28,6 +29,7 @@ from zap.warehouse.fingerprint import fingerprint
 
 app = typer.Typer(help="Zomato AI Data Platform CLI.", no_args_is_help=True)
 app.add_typer(cloud_app, name="cloud")
+app.add_typer(graph_app, name="graph")
 
 SourceOpt = Annotated[Path | None, typer.Option(help="CSV folder (default: DATA_DIR).")]
 TablesOpt = Annotated[

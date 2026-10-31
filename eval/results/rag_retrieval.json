@@ -1,0 +1,79 @@
+{
+  "questions": 54,
+  "chunks": 153,
+  "modes": {
+    "dense": {
+      "recall_at_5": 0.8704,
+      "mrr": 0.6694,
+      "recall_at_5_exact": 0.9444,
+      "recall_at_5_paraphrase": 0.8333
+    },
+    "bm25": {
+      "recall_at_5": 0.6852,
+      "mrr": 0.5692,
+      "recall_at_5_exact": 0.8889,
+      "recall_at_5_paraphrase": 0.5833
+    },
+    "hybrid": {
+      "recall_at_5": 0.8519,
+      "mrr": 0.7462,
+      "recall_at_5_exact": 1.0,
+      "recall_at_5_paraphrase": 0.7778
+    },
+    "hybrid_rerank": {
+      "recall_at_5": 0.8704,
+      "mrr": 0.7277,
+      "recall_at_5_exact": 0.9444,
+      "recall_at_5_paraphrase": 0.8333
+    }
+  },
+  "missed": {
+    "dense": [
+      "x18",
+      "p01",
+      "p09",
+      "p22",
+      "p25",
+      "p31",
+      "p34"
+    ],
+    "bm25": [
+      "x13",
+      "x17",
+      "p01",
+      "p02",
+      "p03",
+      "p05",
+      "p06",
+      "p10",
+      "p13",
+      "p20",
+      "p21",
+      "p22",
+      "p24",
+      "p25",
+      "p31",
+      "p33",
+      "p34"
+    ],
+    "hybrid": [
+      "p05",
+      "p13",
+      "p22",
+      "p24",
+      "p25",
+      "p31",
+      "p33",
+      "p34"
+    ],
+    "hybrid_rerank": [
+      "x18",
+      "p05",
+      "p06",
+      "p13",
+      "p22",
+      "p32",
+      "p33"
+    ]
+  }
+}

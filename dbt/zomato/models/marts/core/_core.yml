@@ -94,6 +94,33 @@ models:
       - name: lifetime_orders
         description: Orders placed (including cancelled and refunded).
 
+  - name: dim_customer_public
+    description: >-
+      dim_customer with no email columns, even masked. The only customer table that generated
+      SQL may read.
+    columns:
+      - name: customer_id
+        description: Customer key.
+        data_tests:
+          - unique
+          - not_null
+      - name: age_band
+        description: Age group, or unknown.
+      - name: occupation
+        description: Self-reported occupation.
+      - name: education
+        description: Self-reported education.
+      - name: family_size
+        description: Self-reported household size.
+      - name: is_registered
+        description: True when the customer exists in the users file.
+      - name: first_order_date
+        description: Date of the first order.
+      - name: last_order_date
+        description: Date of the latest order.
+      - name: lifetime_orders
+        description: Orders placed, of any status.
+
   - name: dim_date
     description: Calendar from date_spine_start to date_spine_end.
     columns:

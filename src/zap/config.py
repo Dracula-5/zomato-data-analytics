@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     neo4j_user: str = "neo4j"
     neo4j_password: SecretStr | None = None
     openai_api_key: SecretStr | None = None
+    # Replay never reaches the API. A run has to set LLM_MODE=live to spend anything.
+    llm_mode: Literal["replay", "live"] = "replay"
+    llm_model: str = "gpt-5.6-luna"
+    llm_reasoning_effort: str = "low"
+    llm_budget_usd: float = Field(default=2.0, gt=0)
+    llm_max_output_tokens: int = Field(default=1500, gt=0)
+    llm_replay_dir: Path = REPO_ROOT / "eval" / "replay"
     # Stops email hashes being reversed with a list of known emails. dbt falls back to a
     # public dev value when unset, which is fine for local work but refused on Snowflake.
     pii_hash_salt: SecretStr | None = None

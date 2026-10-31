@@ -1,0 +1,59 @@
+# Questions for measuring retrieval. A chunk is relevant when it contains `evidence`, so labels
+# come from a fixed rule rather than from judging results after seeing them.
+# exact: names a specific thing. paraphrase: deliberately avoids the document's own words.
+
+- {id: x01, kind: exact, question: "What does the rule ORD_AMOUNT_MISMATCH check?", evidence: "sales_amount differs from subtotal"}
+- {id: x02, kind: exact, question: "What is ITM_PRICE_ROUNDED about?", evidence: "line_amount exceeds price x quantity"}
+- {id: x03, kind: exact, question: "What does REV_BEFORE_ORDER mean?", evidence: "Review dated before its order"}
+- {id: x04, kind: exact, question: "What does MENU_DUPLICATE_ITEM detect?", evidence: "Same food item listed more than once"}
+- {id: x05, kind: exact, question: "What is the rule RST_NO_RATING for?", evidence: "Rating hidden"}
+- {id: x06, kind: exact, question: "What does USR_DUPLICATE_EMAIL find?", evidence: "Email address shared with another user"}
+- {id: x07, kind: exact, question: "What does ORD_SUBTOTAL_MISMATCH compare?", evidence: "Order subtotal differs from the sum of its line amounts"}
+- {id: x08, kind: exact, question: "What does lookback_days control in fct_orders?", evidence: "reprocesses only the last `lookback_days`"}
+- {id: x09, kind: exact, question: "What does make cloud-destroy delete?", evidence: "Deletes the bucket, all its objects and the IAM role"}
+- {id: x10, kind: exact, question: "How does the service user ZAP_SVC sign in?", evidence: "no password and can't use the web UI"}
+- {id: x11, kind: exact, question: "What is in the column f_id of raw.food?", evidence: "Food item identifier"}
+- {id: x12, kind: exact, question: "Why is AIRFLOW__API_AUTH__JWT_LEEWAY set?", evidence: "AIRFLOW__API_AUTH__JWT_LEEWAY=60"}
+- {id: x13, kind: exact, question: "Which version of Neo4j does the project use?", evidence: "Neo4j 5.26.31"}
+- {id: x14, kind: exact, question: "What formula assigns a user to a sampling bucket?", evidence: "mod 2³² mod 10000"}
+- {id: x15, kind: exact, question: "How does incremental_cutoff make date filtering faster?", evidence: "the SQL contains a literal date"}
+- {id: x16, kind: exact, question: "What did the Neo4j reset use that ran out of memory?", evidence: "`DETACH DELETE` in batches"}
+- {id: x17, kind: exact, question: "What does the alerts_smoke DAG prove?", evidence: "proves both callbacks on the real scheduler"}
+- {id: x18, kind: exact, question: "What are _batch_id and _loaded_at?", evidence: "Lineage columns"}
+
+- {id: p01, kind: paraphrase, question: "Why did my first attempt at only processing new rows barely save any time?", evidence: "predicate pushdown being blocked"}
+- {id: p02, kind: paraphrase, question: "How do we avoid missing corrections to recent records when we only touch fresh data?", evidence: "can arrive late or be corrected today"}
+- {id: p03, kind: paraphrase, question: "Will repeating the import produce double the data?", evidence: "Running ingest twice gives the same lake"}
+- {id: p04, kind: paraphrase, question: "Why take a subset of shoppers rather than picking random rows?", evidence: "order history, which the graph and recommender work needs"}
+- {id: p05, kind: paraphrase, question: "How does the warehouse reach the storage bucket with no long-lived credentials?", evidence: "so no AWS key is stored in Snowflake"}
+- {id: p06, kind: paraphrase, question: "Why must provisioning happen in two separate passes?", evidence: "chicken-and-egg"}
+- {id: p07, kind: paraphrase, question: "How can a deployment role set permissions on new tables without account-wide power?", evidence: "let the schema owner set them instead"}
+- {id: p08, kind: paraphrase, question: "Why did a rate come out slightly different on the two database engines?", evidence: "rounded twice"}
+- {id: p09, kind: paraphrase, question: "What is the danger of hashing addresses with a publicly known value?", evidence: "can be reversed with a list of emails"}
+- {id: p10, kind: paraphrase, question: "Did physically sorting the big table speed up date queries?", evidence: "Decision: no `cluster_by`"}
+- {id: p11, kind: paraphrase, question: "Does demand jump during festivals like Diwali?", evidence: "no holiday effect"}
+- {id: p12, kind: paraphrase, question: "Why can a gradient boosted model never predict a new all-time high?", evidence: "can't extrapolate"}
+- {id: p13, kind: paraphrase, question: "What is the lowest error any model could hope for on daily demand?", evidence: "perfect forecast has a MAPE"}
+- {id: p14, kind: paraphrase, question: "How was it shown that models could not peek at tomorrow's numbers?", evidence: "must change no forecast"}
+- {id: p15, kind: paraphrase, question: "Why does the textbook outlier score fail to notice sudden falls in demand?", evidence: "the weekly swing inflates its standard deviation"}
+- {id: p16, kind: paraphrase, question: "How useful would alerts be if real incidents were very rare?", evidence: "would have about 29% precision"}
+- {id: p17, kind: paraphrase, question: "How were big brands identified without reading what they are called?", evidence: "enter the algorithm"}
+- {id: p18, kind: paraphrase, question: "What suggests that several labels may really be one business?", evidence: "run from shared kitchens"}
+- {id: p19, kind: paraphrase, question: "Did the centrality score reveal anything beyond popularity?", evidence: "centrality is just popularity"}
+- {id: p20, kind: paraphrase, question: "Why were all those seemingly linked food combinations not a genuine habit?", evidence: "Tested within each restaurant, the count is"}
+- {id: p21, kind: paraphrase, question: "How can we trust a test that reports nothing unusual?", evidence: "A result of zero is only meaningful"}
+- {id: p22, kind: paraphrase, question: "What made wiping the database crash?", evidence: "Relationships are now deleted first"}
+- {id: p23, kind: paraphrase, question: "Why did repeating the identical analysis give other numbers?", evidence: "Louvain only repeats exactly on one thread"}
+- {id: p24, kind: paraphrase, question: "Could customer logins end up in cloud storage?", evidence: "are dropped at ingestion"}
+- {id: p25, kind: paraphrase, question: "What stops business users from seeing who a customer is on the cloud warehouse?", evidence: "hides both from every role except"}
+- {id: p26, kind: paraphrase, question: "Why did task authentication fail on and off inside Docker?", evidence: "Time jumped backwards"}
+- {id: p27, kind: paraphrase, question: "What goes wrong if you swap the small dataset for the big one and run a normal build?", evidence: "still hold sample rows"}
+- {id: p28, kind: paraphrase, question: "What is the ongoing monthly bill for keeping files on AWS?", evidence: "about $0.012 a month until destroyed"}
+- {id: p29, kind: paraphrase, question: "Why does the file layout have a folder per day?", evidence: "one folder, not 10M rows"}
+- {id: p30, kind: paraphrase, question: "Why were charts unreadable for people who prefer a dark screen?", evidence: "fixed Streamlit to a light theme"}
+- {id: p31, kind: paraphrase, question: "What happens to a comment left before the purchase it refers to shows up?", evidence: "late-arriving parent"}
+- {id: p32, kind: paraphrase, question: "How do the tables that record events differ from the ones that describe things?", evidence: "the who, what and where"}
+- {id: p33, kind: paraphrase, question: "Why not generate our own artificial identifiers for each record?", evidence: "keeps the SQL readable"}
+- {id: p34, kind: paraphrase, question: "Why do so few ordered dishes match a listing?", evidence: "of restaurants have any menu data"}
+- {id: p35, kind: paraphrase, question: "Which is the simplest forecast that still has to be beaten?", evidence: "the baseline; a model that can't beat it is useless"}
+- {id: p36, kind: paraphrase, question: "Why is one prediction made per future day rather than feeding predictions back in?", evidence: "errors would compound"}

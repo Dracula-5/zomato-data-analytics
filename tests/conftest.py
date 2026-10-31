@@ -26,6 +26,7 @@ def _fresh_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator
         "S3_BUCKET",
         "AWS_REGION",
         "PII_HASH_SALT",
+        "LLM_MODE",
         "SNOWFLAKE_ACCOUNT",
         "SNOWFLAKE_PRIVATE_KEY_PATH",
         "OPENAI_API_KEY",

@@ -1,0 +1,256 @@
+# Questions with gold SQL, for measuring text-to-SQL on the full dataset. An answer is scored by
+# its result rows, not its text. `ordered: true` means the question asks for a ranking.
+
+- id: e01
+  level: easy
+  question: How many orders are there in total?
+  gold_sql: select count(*) from marts.fct_orders
+
+- id: e02
+  level: easy
+  question: What is the total GMV across the whole period?
+  gold_sql: select sum(gmv) from marts.mart_daily_kpis
+
+- id: e03
+  level: easy
+  question: What was the national average order value on 2026-06-30?
+  gold_sql: select aov from marts.mart_daily_kpis where order_date = '2026-06-30'
+
+- id: e04
+  level: easy
+  question: How many cities are there?
+  gold_sql: select count(*) from marts.dim_city
+
+- id: e05
+  level: easy
+  question: Which 5 cities have the most restaurants? Rank them, most first.
+  gold_sql: select city, restaurants from marts.dim_city order by restaurants desc, city limit 5
+  ordered: true
+
+- id: e06
+  level: easy
+  question: How many dishes are vegetarian?
+  gold_sql: select count(*) from marts.dim_food where is_veg
+
+- id: e07
+  level: easy
+  question: How many customers are there in each age band?
+  gold_sql: select age_band, count(*) from marts.dim_customer_public group by age_band
+
+- id: e08
+  level: easy
+  question: How many orders were placed with each payment method?
+  gold_sql: select payment_method, count(*) from marts.fct_orders group by payment_method
+
+- id: e09
+  level: easy
+  question: Which 3 days had the most orders? Rank them, busiest first.
+  gold_sql: select order_date, orders from marts.mart_daily_kpis order by orders desc limit 3
+  ordered: true
+
+- id: e10
+  level: easy
+  question: Which data quality rules found at least one failing row?
+  gold_sql: select rule_id from governance.dq_results where rows_failed > 0
+
+- id: e11
+  level: easy
+  question: Which forecasting model has the lowest MAPE for national orders?
+  gold_sql: >-
+    select model from forecast.accuracy where metric = 'orders' and scope = 'National'
+    order by mape limit 1
+
+- id: e12
+  level: easy
+  question: What does the ETS model forecast for national orders on 2026-07-01?
+  gold_sql: >-
+    select forecast from forecast.next_days
+    where metric = 'orders' and scope = 'National' and model = 'ets'
+      and cast(target_date as date) = '2026-07-01'
+
+- id: m01
+  level: medium
+  question: What were the top 10 cities by GMV in June 2026? Rank them, highest first.
+  gold_sql: >-
+    select city, sum(gmv) as gmv from marts.mart_city_daily
+    where order_date between '2026-06-01' and '2026-06-30'
+    group by city order by gmv desc limit 10
+  ordered: true
+
+- id: m02
+  level: medium
+  question: How many orders were placed in each month of 2025? Show them in month order.
+  gold_sql: >-
+    select date_trunc('month', order_date) as month, sum(orders) as orders
+    from marts.mart_daily_kpis where year(order_date) = 2025 group by 1 order by 1
+  ordered: true
+
+- id: m03
+  level: medium
+  question: What share of orders is cancelled for each payment method?
+  gold_sql: >-
+    select payment_method, avg(case when is_cancelled then 1.0 else 0.0 end) as cancel_rate
+    from marts.fct_orders group by payment_method
+
+- id: m04
+  level: medium
+  question: On average, how many orders a day are placed on weekends, and how many on weekdays?
+  gold_sql: >-
+    select is_weekend, avg(orders) as orders_per_day from marts.mart_daily_kpis group by is_weekend
+
+- id: m05
+  level: medium
+  question: Which primary cuisine has the most restaurants?
+  gold_sql: >-
+    select primary_cuisine from marts.dim_restaurant where primary_cuisine is not null
+    group by primary_cuisine order by count(*) desc limit 1
+
+- id: m06
+  level: medium
+  question: What is the average delivery time in minutes of delivered orders, for each hour of day?
+  gold_sql: >-
+    select order_hour, avg(delivery_time_min) from marts.fct_orders where is_delivered
+    group by order_hour
+
+- id: m07
+  level: medium
+  question: Which 5 restaurants in Bangalore have the highest GMV? Rank them, highest first.
+  gold_sql: >-
+    select restaurant_id, gmv from marts.mart_restaurant_performance
+    where city = 'Bangalore' order by gmv desc, restaurant_id limit 5
+  ordered: true
+
+- id: m08
+  level: medium
+  question: What is the 90th percentile delivery time in Mumbai for orders placed at 8pm?
+  gold_sql: >-
+    select p90_delivery_min from marts.mart_delivery_sla
+    where city = 'Mumbai' and order_hour = 20
+
+- id: m09
+  level: medium
+  question: What was the average review rating in Delhi in each month of 2025? Show them in month order.
+  gold_sql: >-
+    select date_trunc('month', review_date) as month, avg(rating) from marts.fct_reviews
+    where city = 'Delhi' and year(review_date) = 2025 group by 1 order by 1
+  ordered: true
+
+- id: m10
+  level: medium
+  question: How many reviews are dated before their own order?
+  gold_sql: select count(*) from marts.fct_reviews where is_before_order
+
+- id: m11
+  level: medium
+  question: What share of all orders was refunded?
+  gold_sql: select avg(case when is_refunded then 1.0 else 0.0 end) from marts.fct_orders
+
+- id: m12
+  level: medium
+  question: Which cities have at least 500,000 orders in total?
+  gold_sql: >-
+    select city from marts.mart_city_daily group by city having sum(orders) >= 500000
+
+- id: m13
+  level: medium
+  question: Which hour of the day has the most orders nationally?
+  gold_sql: >-
+    select order_hour from marts.fct_orders group by order_hour order by count(*) desc limit 1
+
+- id: h01
+  level: hard
+  question: Which 5 dishes sold the most units? Rank them with their names, most first.
+  gold_sql: >-
+    select f.food_name, sum(i.quantity) as units
+    from marts.fct_order_items i join marts.dim_food f on f.food_id = i.food_id
+    group by f.food_name order by units desc, f.food_name limit 5
+  ordered: true
+
+- id: h02
+  level: hard
+  question: What share of total GMV comes from the 10 cities with the highest GMV?
+  gold_sql: >-
+    with city as (select city, sum(gmv) as gmv from marts.mart_city_daily group by city)
+    select sum(gmv) * 1.0 / (select sum(gmv) from city)
+    from (select gmv from city order by gmv desc limit 10)
+
+- id: h03
+  level: hard
+  question: >-
+    What was the month-on-month percentage change in orders for each month of 2026? Show them in
+    month order, as percentages.
+  gold_sql: >-
+    with monthly as (
+      select date_trunc('month', order_date) as month, sum(orders) as orders
+      from marts.mart_daily_kpis group by 1)
+    select month, change_pct from (
+      select month, 100.0 * (orders - lag(orders) over (order by month))
+             / lag(orders) over (order by month) as change_pct
+      from monthly)
+    where year(month) = 2026 order by month
+  ordered: true
+
+- id: h04
+  level: hard
+  question: For each occupation, what is the average number of lifetime orders per customer?
+  gold_sql: >-
+    select occupation, avg(lifetime_orders) from marts.dim_customer_public group by occupation
+
+- id: h05
+  level: hard
+  question: For each of the 3 cities with the most orders, which payment method is used most?
+  gold_sql: >-
+    with top_cities as (
+      select city from marts.mart_city_daily group by city order by sum(orders) desc limit 3),
+    counted as (
+      select city, payment_method, count(*) as n,
+             row_number() over (partition by city order by count(*) desc) as rn
+      from marts.fct_orders where city in (select city from top_cities)
+      group by city, payment_method)
+    select city, payment_method from counted where rn = 1
+
+- id: h06
+  level: hard
+  question: What is the average sales amount of orders in which every dish is vegetarian?
+  gold_sql: >-
+    select avg(o.sales_amount) from marts.fct_orders o
+    where o.order_id in (
+      select i.order_id from marts.fct_order_items i
+      join marts.dim_food f on f.food_id = i.food_id
+      group by i.order_id having bool_and(f.is_veg))
+
+- id: h07
+  level: hard
+  question: What share of customers who have ordered have placed more than one order?
+  gold_sql: >-
+    select avg(case when lifetime_orders > 1 then 1.0 else 0.0 end)
+    from marts.dim_customer_public where lifetime_orders > 0
+
+- id: h08
+  level: hard
+  question: How many restaurants rated at least 4.5 have at least 100 orders?
+  gold_sql: >-
+    select count(*) from marts.mart_restaurant_performance
+    where listed_rating >= 4.5 and orders >= 100
+
+- id: h09
+  level: hard
+  question: On average, how many days after the order date is a review written?
+  gold_sql: select avg(review_date - order_date) from marts.fct_reviews
+
+- id: h10
+  level: hard
+  question: In which month did national orders first average more than 10,000 a day?
+  gold_sql: >-
+    select date_trunc('month', order_date) as month from marts.mart_daily_kpis
+    group by 1 having avg(orders) > 10000 order by 1 limit 1
+
+- id: h11
+  level: hard
+  question: >-
+    Among cities with at least 10,000 delivered orders, which has the highest share of deliveries
+    later than the SLA?
+  gold_sql: >-
+    select city from marts.mart_delivery_sla group by city
+    having sum(delivered_orders) >= 10000
+    order by sum(sla_breaches) * 1.0 / sum(delivered_orders) desc limit 1

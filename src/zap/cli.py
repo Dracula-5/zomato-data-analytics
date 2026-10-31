@@ -8,6 +8,7 @@ from typing import Annotated
 import duckdb
 import typer
 
+from zap.ai_commands import ai_app
 from zap.bench import bench_incremental, bench_queries, write_bench
 from zap.cloud.commands import cloud_app
 from zap.config import get_settings
@@ -30,6 +31,7 @@ from zap.warehouse.fingerprint import fingerprint
 app = typer.Typer(help="Zomato AI Data Platform CLI.", no_args_is_help=True)
 app.add_typer(cloud_app, name="cloud")
 app.add_typer(graph_app, name="graph")
+app.add_typer(ai_app, name="ai")
 
 SourceOpt = Annotated[Path | None, typer.Option(help="CSV folder (default: DATA_DIR).")]
 TablesOpt = Annotated[

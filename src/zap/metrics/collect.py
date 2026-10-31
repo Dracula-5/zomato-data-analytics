@@ -108,7 +108,25 @@ def pipeline_metrics(src: Sources) -> list[Metric]:
     when = stamp(run, "started_at")
     source = "artifacts/pipeline/full/latest.json"
     sample = src.art("pipeline/sample_5pct/latest.json")
+    fresh = src.art("fresh_clone.json")
+    demo = dig(fresh, "demo_seconds") if dig(fresh, "exit_code") == 0 else None
     return [
+        Metric(
+            group,
+            "`make demo` on a fresh clone",
+            show(demo, seconds),
+            "SYNTHETIC fixture",
+            "artifacts/fresh_clone.json",
+            stamp(fresh),
+        ),
+        Metric(
+            group,
+            "Install on a fresh clone, with packages already cached",
+            show(dig(fresh, "install_seconds"), seconds),
+            "SYNTHETIC fixture",
+            "artifacts/fresh_clone.json",
+            stamp(fresh),
+        ),
         Metric(
             group,
             "Rows through the pipeline",

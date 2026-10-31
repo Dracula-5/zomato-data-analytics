@@ -52,6 +52,12 @@ def test_a_partly_written_file_gives_not_run_rather_than_a_crash(tmp_path: Path)
     assert metrics["Chains found"].value == NOT_RUN
 
 
+def test_a_failed_fresh_clone_run_reports_no_time(tmp_path: Path) -> None:
+    write(tmp_path / "a" / "fresh_clone.json", {"demo_seconds": 59, "exit_code": 1})
+    metrics = {m.name: m for m in collect(tmp_path / "a", tmp_path / "r", tmp_path / "s.jsonl")}
+    assert metrics["`make demo` on a fresh clone"].value == NOT_RUN
+
+
 def test_dig_survives_missing_levels() -> None:
     assert dig({"a": {"b": 1}}, "a", "b") == 1
     assert dig({"a": {}}, "a", "b", "c") is None

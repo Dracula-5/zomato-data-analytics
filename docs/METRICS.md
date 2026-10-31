@@ -7,12 +7,14 @@ The source data is **synthetic-looking**: it behaves like generated data, so res
 this dataset rather than real food delivery. Anything marked SYNTHETIC used events planted on
 purpose to test a detector. The 5% sample is by user, and keeps each user's whole history.
 
-**83 of 88 metrics have been measured.**
+**85 of 90 metrics have been measured.**
 
 ## Pipeline size and speed
 
 | Metric | Value | Data | Source | Ran |
 |---|---|---|---|---|
+| `make demo` on a fresh clone | **59.0 s** | SYNTHETIC fixture | `artifacts/fresh_clone.json` | 2026-10-31 |
+| Install on a fresh clone, with packages already cached | **61.0 s** | SYNTHETIC fixture | `artifacts/fresh_clone.json` | 2026-10-31 |
 | Rows through the pipeline | **35,098,217** | Full data (synthetic-looking source) | `artifacts/pipeline/full/latest.json` | 2026-10-31 |
 | Lake size | **0.53 GB** | Full data (synthetic-looking source) | `artifacts/pipeline/full/latest.json` | 2026-10-31 |
 | End-to-end `make local-full` | **289.2 s** | Full data (synthetic-looking source) | `artifacts/pipeline/full/latest.json` | 2026-10-31 |

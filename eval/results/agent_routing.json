@@ -1,0 +1,89 @@
+{
+  "questions": 31,
+  "by_tool": {
+    "sql": 10,
+    "rag": 8,
+    "graph": 7,
+    "forecast": 6
+  },
+  "keyword_router": {
+    "accuracy": 0.7419,
+    "confusion": {
+      "sql": {
+        "sql": 6,
+        "rag": 4,
+        "graph": 0,
+        "forecast": 0
+      },
+      "rag": {
+        "sql": 3,
+        "rag": 5,
+        "graph": 0,
+        "forecast": 0
+      },
+      "graph": {
+        "sql": 0,
+        "rag": 0,
+        "graph": 7,
+        "forecast": 0
+      },
+      "forecast": {
+        "sql": 1,
+        "rag": 0,
+        "graph": 0,
+        "forecast": 5
+      }
+    },
+    "wrong": [
+      {
+        "id": "s06",
+        "expected": "sql",
+        "got": "rag",
+        "question": "How is GMV trending month by month in 2026?"
+      },
+      {
+        "id": "s07",
+        "expected": "sql",
+        "got": "rag",
+        "question": "How are orders split across payment methods?"
+      },
+      {
+        "id": "s08",
+        "expected": "sql",
+        "got": "rag",
+        "question": "Why is Bangalore's order count higher than Delhi's? Show both totals."
+      },
+      {
+        "id": "s10",
+        "expected": "sql",
+        "got": "rag",
+        "question": "How many data quality rules failed at least one row?"
+      },
+      {
+        "id": "r06",
+        "expected": "rag",
+        "got": "sql",
+        "question": "What was decided about Great Expectations and DuckDB?"
+      },
+      {
+        "id": "r07",
+        "expected": "rag",
+        "got": "sql",
+        "question": "Which secrets are kept out of the repository?"
+      },
+      {
+        "id": "r08",
+        "expected": "rag",
+        "got": "sql",
+        "question": "What protects the warehouse from a bad generated query?"
+      },
+      {
+        "id": "f06",
+        "expected": "forecast",
+        "got": "sql",
+        "question": "What should we expect in orders in early July 2026?"
+      }
+    ]
+  },
+  "llm_router": "not run"
+}

@@ -21,7 +21,7 @@ from zap.rag.evaluate import GoldQuestion, normal_text
 from zap.rag.retrieve import Retriever
 
 PASSAGES = 5
-# Measured on the golden set: reranking added about 3 s a question on CPU and no better results.
+# Measured on the golden set: reranking added 2.2 s a question on CPU and no better results.
 SEARCH_MODE = "hybrid"
 ANSWER_PURPOSE = "rag_answer"
 JUDGE_PURPOSE = "rag_judge"
@@ -55,6 +55,7 @@ class CitedAnswer:
     found: bool
     cited: list[str] = field(default_factory=list)
     passages: list[str] = field(default_factory=list)
+    retrieved: list[str] = field(default_factory=list)
 
 
 def _numbered(texts: list[str]) -> str:
@@ -76,9 +77,8 @@ def answer_question(client: LlmClient, retriever: Retriever, question: str) -> C
     reply = client.complete_as(
         ANSWER_RULES, prompt, ANSWER_PURPOSE, RagAnswer, check=citations_are_real
     )
-    return CitedAnswer(
-        question, reply.answer, reply.found, [ids[n - 1] for n in reply.citations], texts
-    )
+    cited = [ids[n - 1] for n in reply.citations]
+    return CitedAnswer(question, reply.answer, reply.found, cited, texts, ids)
 
 
 def judge_answer(client: LlmClient, answer: CitedAnswer) -> Judgement:

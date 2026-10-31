@@ -10,7 +10,7 @@ export PYTHONUTF8 := 1
 SAMPLE_PCT ?= 5
 
 .PHONY: help setup lint format typecheck test check hooks fixtures info \
-        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve forecast bench app \
+        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve metrics recsys forecast bench app \
         up-neo4j down-neo4j graph airflow-bootstrap airflow-up airflow-up-snowflake airflow-down airflow-replay \
         airflow-replay-snowflake airflow-smoke \n        cloud-keys cloud-whoami cloud-infra cloud-setup cloud-upload cloud-load cloud-dbt cloud-check cloud-bench cloud-destroy
 
@@ -74,6 +74,12 @@ docs: ## dbt docs + regenerate docs/DATA_DICTIONARY.md (uses the SAMPLE_PCT ware
 
 docs-serve: ## Browse the dbt docs site (lineage graph) at http://localhost:8081
 	$(RUN) zap dbt docs serve --port 8081
+
+metrics: ## Regenerate docs/METRICS.md from the files that real runs wrote
+	$(RUN) zap metrics
+
+recsys: ## Audit the orders for taste and score recommenders on the full dataset
+	$(RUN) zap recsys --dataset full
 
 forecast: ## Backtest forecasts and score anomaly detection on the full dataset (needs local-full)
 	$(RUN) zap forecast --dataset full

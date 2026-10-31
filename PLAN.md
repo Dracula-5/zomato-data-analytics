@@ -366,8 +366,8 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 - [x] M5 Cloud: Terraform, S3, Snowflake
 - [x] M6 Forecasting + anomalies
 - [x] M7 Knowledge graph
-- [ ] M8 GenAI + evals
-- [ ] M9 Agentic Copilot + eval
-- [ ] M10 Recsys audit (+ GNN if chosen)
-- [ ] M11 Metrics, docs, deliverables
+- [ ] M8 GenAI + evals (built; the paid evaluations are not run)
+- [ ] M9 Agentic Copilot + eval (built; the LLM router score is not run)
+- [x] M10 Recsys audit
+- [x] M11 Metrics, docs, deliverables (5 metrics wait on the paid runs)
 - [ ] B7 image classifier: recommended cut (D3)

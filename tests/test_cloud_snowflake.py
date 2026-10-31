@@ -121,6 +121,16 @@ def test_full_load_covers_every_table_and_writes_a_log(
     assert saved["rows"] == 10 * len(contracts)
 
 
+def test_a_day_load_keeps_the_record_of_the_full_load(
+    contracts: dict[str, Contract], tmp_path: Path
+) -> None:
+    full = sf.write_load_log(sf.load_raw(FakeConnection(), contracts, "raw/", "full"), tmp_path)
+    day = date(2026, 6, 24)
+    daily = sf.load_raw(FakeConnection(), contracts, "raw/", "full", day=day)
+    assert sf.write_load_log(daily, tmp_path) != full
+    assert json.loads(full.read_text(encoding="utf-8"))["partition_date"] is None
+
+
 def test_copy_with_no_files_counts_zero_rows() -> None:
     cursor = FakeCursor(FakeConnection())
     cursor.description = [("status",)]  # Snowflake's "Copy executed with 0 files processed."

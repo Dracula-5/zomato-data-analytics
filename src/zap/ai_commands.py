@@ -117,6 +117,20 @@ def sql_eval_cmd(dataset: DatasetOpt = "full") -> None:
     typer.echo(f"Report: {_save('text2sql', report)}")
 
 
+@ai_app.command("agent-eval")
+def agent_eval_cmd() -> None:
+    """Score routing. The keyword baseline is free; the LLM router spends money when live."""
+    from zap.agent.evaluate import evaluate_routing, load_golden
+    from zap.llm.client import LlmClient
+
+    questions = load_golden(REPO_ROOT / "eval" / "agent_golden.yml")
+    report = evaluate_routing(LlmClient(get_settings()), questions)
+    typer.echo(f"Keyword router: {report['keyword_router']['accuracy']:.1%}")
+    llm = report["llm_router"]
+    typer.echo(f"LLM router: {llm if isinstance(llm, str) else format(llm['accuracy'], '.1%')}")
+    typer.echo(f"Report: {_save('agent_routing', report)}")
+
+
 @ai_app.command("enrich")
 def enrich_cmd(dataset: DatasetOpt = "full") -> None:
     """Label each distinct review text once. Spends money when live."""

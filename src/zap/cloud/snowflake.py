@@ -178,7 +178,9 @@ def load_raw(
 
 
 def write_load_log(run: LoadRun, artifacts_dir: Path) -> Path:
-    path = artifacts_dir / "cloud" / f"snowflake_load_{run.dataset}.json"
+    # One file per day, so a daily run can't overwrite the record of the full load.
+    day = f"_{run.partition_date}" if run.partition_date else ""
+    path = artifacts_dir / "cloud" / f"snowflake_load_{run.dataset}{day}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     data = asdict(run) | {"rows": run.rows}
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")

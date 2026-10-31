@@ -1,0 +1,37 @@
+# Mixed questions for measuring routing. Several are written to trip a keyword list: they use a
+# word that points at the wrong tool. A router earns its cost on these.
+
+- {id: s01, tool: sql, question: "How many orders were delivered in Pune in June 2026?"}
+- {id: s02, tool: sql, question: "Which city had the highest GMV last month?"}
+- {id: s03, tool: sql, question: "What is the average order value in Chennai?"}
+- {id: s04, tool: sql, question: "List the five restaurants with the most reviews."}
+- {id: s05, tool: sql, question: "What share of orders is paid by UPI?"}
+- {id: s06, tool: sql, question: "How is GMV trending month by month in 2026?"}
+- {id: s07, tool: sql, question: "How are orders split across payment methods?"}
+- {id: s08, tool: sql, question: "Why is Bangalore's order count higher than Delhi's? Show both totals."}
+- {id: s09, tool: sql, question: "Which cuisine has the highest average rating?"}
+- {id: s10, tool: sql, question: "How many data quality rules failed at least one row?"}
+
+- {id: r01, tool: rag, question: "How is GMV defined on this platform?"}
+- {id: r02, tool: rag, question: "What does the rule REV_BEFORE_ORDER check?"}
+- {id: r03, tool: rag, question: "Why does Terraform run twice during setup?"}
+- {id: r04, tool: rag, question: "Why was clustering left off on Snowflake?"}
+- {id: r05, tool: rag, question: "How does the sample keep a user's whole history?"}
+- {id: r06, tool: rag, question: "What was decided about Great Expectations and DuckDB?"}
+- {id: r07, tool: rag, question: "Which secrets are kept out of the repository?"}
+- {id: r08, tool: rag, question: "What protects the warehouse from a bad generated query?"}
+
+- {id: g01, tool: graph, question: "Which restaurant chains did the graph find?"}
+- {id: g02, tool: graph, question: "Which brands share one kitchen?"}
+- {id: g03, tool: graph, question: "Which restaurants have the same menu under different names?"}
+- {id: g04, tool: graph, question: "Which restaurants are the most central by PageRank?"}
+- {id: g05, tool: graph, question: "Recommend restaurants for a customer based on similar menus."}
+- {id: g06, tool: graph, question: "How many chains were found?"}
+- {id: g07, tool: graph, question: "Are any dishes really bought together?"}
+
+- {id: f01, tool: forecast, question: "What are the forecast orders for next week in Mumbai?"}
+- {id: f02, tool: forecast, question: "Predict national GMV for the next 14 days."}
+- {id: f03, tool: forecast, question: "Which forecasting model has the lowest error?"}
+- {id: f04, tool: forecast, question: "Were there any anomalies in Bangalore orders?"}
+- {id: f05, tool: forecast, question: "How accurate is the orders forecast for Delhi?"}
+- {id: f06, tool: forecast, question: "What should we expect in orders in early July 2026?"}

@@ -46,18 +46,21 @@ class SqlAnswer:
         return len(self.errors) + (1 if self.ok else 0)
 
 
+def draft_sql(client: LlmClient, schema: str, prompt: str) -> str:
+    return client.complete_as(RULES + schema, prompt, PURPOSE, SqlDraft, attempts=1).sql
+
+
 def answer_question(client: LlmClient, db_path: Path, schema: str, question: str) -> SqlAnswer:
     """Every draft goes through the guard, so a repair can't skip the safety check."""
     answer = SqlAnswer(question)
     prompt = question
     for _ in range(ATTEMPTS):
-        draft = client.complete_as(RULES + schema, prompt, PURPOSE, SqlDraft, attempts=1)
-        answer.sql = draft.sql
+        answer.sql = draft_sql(client, schema, prompt)
         try:
-            answer.rows = run_readonly(db_path, check_sql(draft.sql))
+            answer.rows = run_readonly(db_path, check_sql(answer.sql))
             return answer
         except (GuardError, duckdb.Error) as err:
             reason = str(err)[:400]
             answer.errors.append(reason)
-            prompt = f"{question}\n\nThis SQL failed:\n{draft.sql}\n\nThe error:\n{reason}"
+            prompt = f"{question}\n\nThis SQL failed:\n{answer.sql}\n\nThe error:\n{reason}"
     return answer

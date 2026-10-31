@@ -1002,3 +1002,188 @@ average*. A 2× effect could still hide, because 67 orders per restaurant can't 
 7. **The page said "run `make graph`" when results existed.** The dashboard defaults to the `full`
    dataset, but the graph is built from the sample. Tests passed, because they only load one
    dataset. It only showed up by opening the page as a reader would.
+
+## M8: GenAI, with evaluation and a budget
+
+**Status of the paid parts: not run.** The OpenAI account had no credit, so enrichment, text-to-SQL
+accuracy and answer quality have no results yet. Everything below that shows a number was measured
+locally for free.
+
+### An LLM client that can't spend by accident
+
+Every AI feature goes through `src/zap/llm/client.py`, which enforces four rules:
+
+- **Replay is the default.** Answers come from `eval/replay/`, so tests and CI need no key and can't
+  reach the API. A run must set `LLM_MODE=live` to spend anything.
+- **Every live answer is saved,** so repeating a question costs nothing and an evaluation can be
+  re-scored without paying again.
+- **The budget is checked before each call,** against the worst case for that call, using a ledger
+  in the repo. So $2 means $2 across all runs, not $2 per run.
+- **A model with no known price is refused,** because the budget would mean nothing.
+
+### Reviews are not what they seem
+
+300,000 reviews sound like a good corpus. Profiling first showed only **294 distinct texts**,
+templated by rating band. That changed two things. Enrichment labels each text once, which turns
+300,000 calls into about a dozen. And RAG runs on the project's real documents, because searching
+294 templates would prove nothing.
+
+### Search, measured stage by stage
+
+153 chunks from the data dictionary, these notes, the setup guide and the quality rules. 54 golden
+questions: 18 name something exact, and 36 are deliberately paraphrased to avoid the document's own
+words. A chunk counts as relevant when it contains the question's evidence phrase, so nobody judges
+results after seeing them. All of this runs locally.
+
+| Stage | Recall@5 | MRR | Recall@5, exact | Recall@5, paraphrased |
+|---|---|---|---|---|
+| BM25 | 0.685 | 0.569 | 0.889 | 0.583 |
+| Dense | 0.870 | 0.669 | 0.944 | 0.833 |
+| Hybrid | 0.852 | 0.746 | 1.000 | 0.778 |
+| Hybrid + rerank | 0.870 | 0.728 | 0.944 | 0.833 |
+
+Hybrid ranks best and is the only stage to find every exact identifier, which matters for rule
+names. **The reranker didn't earn its place:** it added 2.2 seconds a question on CPU, taking a
+search from 0.05 s to 2.26 s, and didn't improve on hybrid, so answers don't use it. Two cautions: a one-question gap on 54 questions isn't
+significant, and I wrote both the questions and the documents, which flatters every stage.
+
+### The SQL guard
+
+See [ADR 3](adr/0003-guarding-generated-sql.md). The guard parses SQL rather than searching for bad
+words, and refuses 92 attacks. A read-only connection with file access off is the second layer, and
+tests bypass the guard to prove it holds alone.
+
+Passing my own attack list proved little, so I tried to think of what would really get through,
+and found a hole: `SELECT c FROM marts.dim_customer c` returns whole rows, emails included, without
+naming a column. The lesson is that a blocklist can't list everything. The fix wasn't a longer
+list: generated SQL now reads a view that has no email columns at all.
+
+### What went wrong (and what each one teaches)
+
+1. **A test of "comments can't survive" failed.** The parser keeps comments in the SQL it rebuilds.
+   They were harmless, but nothing the guard didn't examine should run, so they're stripped.
+2. **The first paid call failed with no credit.** Nothing was charged, and the design paid off: all
+   the free work carried on, and each paid step is one command away.
+3. **The formatter reflowed lines my edit scripts matched on.** Small, and a reminder to check
+   that an edit was applied rather than assume it.
+
+---
+
+## M9: The analytics copilot
+
+**Status of the paid part: not run.** The LLM router and the SQL and document tools need credit.
+Routing fell back to keywords, and forecast and graph questions worked end to end on real data.
+
+### The flow
+
+`route -> plan -> approve (only for expensive SQL) -> execute -> validate -> answer`
+
+LangGraph makes this an explicit state machine, so each path can be read and tested. `approve` uses
+`interrupt`, which pauses the run and waits for a person. A query that scans a huge fact table with
+no date limit needs a yes first, and a denied query never runs.
+
+### A model shouldn't mark its own work
+
+`validate` is plain code, and a failed check blocks the answer:
+
+- the SQL must pass the guard, checked again after planning
+- the result must not be empty
+- every number in the answer must appear in the tool's output
+- every citation must be a passage that was retrieved
+
+Forecast and graph answers are written by code from stored results, so no number can change on the
+way to the user. A test feeds in an invented figure and confirms it's blocked.
+
+### Routing baseline
+
+| Router | Accuracy on 31 questions | Graph | SQL vs documents |
+|---|---|---|---|
+| Keywords | 74.2% | 7 of 7 | most errors are here |
+| LLM | not run | | |
+
+The keyword router is the baseline the LLM has to beat to justify its cost. The errors are left in:
+padding the keyword list to pass its own test would make the baseline meaningless. "How is GMV
+trending?" fails because `how is` looks like a question about definitions.
+
+### What went wrong (and what each one teaches)
+
+1. **Trying it as a user found what tests didn't.** "Which restaurant chains?" returned multi-brand
+   groups too, which broke my own definition of a chain, and dates showed `00:00:00`.
+2. **A meaningless assertion slipped into a test.** `... is False or True` can never fail. Reading
+   my own tests caught it.
+
+---
+
+## M10: Can this data support a recommender?
+
+### Audit first, with the right control
+
+Shuffling the restaurant column keeps how active each customer is and how popular each restaurant
+is, and destroys any link between the two. If a statistic looks the same on real and shuffled
+orders, customers show no taste that this data can reveal.
+
+| On 10M orders | Real | Shuffled |
+|---|---|---|
+| Orders back to a restaurant already used | 0.20% | 0.20% |
+| Share of orders in a customer's top city | 14.53% | 14.54% |
+| Share of orders in a customer's top cuisine | 19.02% | 19.01% |
+
+They're identical. Restaurant popularity is real, though: orders correlate 0.78 with listed rating
+counts.
+
+### The result that looked good
+
+Training on orders before 2026-04-01 and testing on later ones, for 3,000 customers:
+
+| Orders | Random | Popularity | City popularity | Matrix factorization |
+|---|---|---|---|---|
+| Real | 0.00005 | 0.00024 | 0.00042 | 0.00077 |
+| Shuffled | 0.00007 | 0.00033 | 0.00036 | 0.00039 |
+| Planted taste (SYNTHETIC) | 0.00007 | 0.00079 | 0.00168 | 0.01542 |
+
+Matrix factorization is **15 times better than random**, which is easy to put on a resume and
+wrong to. Random recommendations ignore popularity, so random was the wrong baseline. Here the
+restaurants were shuffled within each day, which also keeps each restaurant's popularity on every
+date. On those orders, which hold no taste at all, the same model still scores about 6 times
+random. Real and shuffled overlap, at 23 and 20 customers with a hit out of 3,000.
+
+The planted row shows the method works: it scores 20 times higher when taste is really there.
+
+**Conclusion:** this data can't support personalized recommendations, and a graph neural network
+wouldn't change that. *The baseline decides what a result means, so ask what the baseline assumes.*
+
+---
+
+## M11: Metrics and documents
+
+### Numbers come from files, and a test enforces it
+
+`make metrics` reads every value from a file a real run wrote, and shows "not run" when there isn't
+one, so METRICS.md can't hold a number nobody measured. A test also fails if any number in the resume
+bullets isn't in METRICS.md.
+
+### Reading the report line by line found what generating it didn't
+
+1. **"Rows loaded into Snowflake: 43,420."** The real figure is 35,098,217. The Airflow day load had
+   overwritten the record of the full load, and the same had happened to the ingest record. Day
+   loads now write their own file.
+2. **A shuffled control was labelled as planted data.** Nothing was planted there.
+3. **A reranker time of "about 3 seconds" came from dividing a total, not from measuring.** Timing it
+   gave 2.2 s, after the wrong figure had reached three documents.
+
+### One slowdown stayed unexplained
+
+With 7 tables, the fact models save 91.8%, but the whole project took 31.4 to 69.5 s incrementally
+against 46.3 to 56.2 s for a full refresh, so there is no reliable whole-project saving. In a slow run,
+two marts took 31 and 51 s. I tested two explanations and both failed: alone they take about 3 s at
+either memory limit, and whole-project runs then took 21 to 31 s at 4, 2 or 1 threads. The cause of
+the slow benchmark runs wasn't found, so the report shows the range rather than a story about it.
+
+This replaces the 28.0% in the M2 section, which was measured on 4 tables.
+
+### What went wrong (and what each one teaches)
+
+1. **A fix I was sure of didn't work, twice.** Memory, then thread contention. Both sounded right,
+   and testing each took minutes. *A plausible explanation isn't a finding.*
+2. **The first draft of the architecture document made a false claim** about what quarantine can
+   do. Checking documents against the code matters as much as testing the code.

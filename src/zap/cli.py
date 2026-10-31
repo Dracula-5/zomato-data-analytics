@@ -1,7 +1,7 @@
 """`zap` command-line interface. The Makefile is a thin wrapper around these commands."""
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -280,6 +280,54 @@ def forecast_cmd(dataset: DatasetOpt = None) -> None:
             f"{result['false_alarms_per_1000_normal_days']} false alarms per 1,000 normal days"
         )
     typer.echo(f"Report: {settings.artifacts_dir / 'forecast_backtest.json'}")
+
+
+@app.command("recsys")
+def recsys_cmd(dataset: DatasetOpt = "full") -> None:
+    """Audit the orders for taste, then score recommenders on a temporal split."""
+    from zap.recsys.baselines import run_recsys
+
+    settings = get_settings()
+    label = _dataset(dataset)
+    db_path = settings.duckdb_path(label)
+    if not db_path.exists():
+        typer.echo(f"ERROR: no warehouse for dataset '{label}' ({db_path})", err=True)
+        raise typer.Exit(code=1)
+    report = run_recsys(db_path)
+    report["ran_at"] = datetime.now(UTC).isoformat()
+    path = settings.artifacts_dir / "recsys_eval.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8", newline="\n")
+    for name, measure in report["signal_audit"]["measures"].items():
+        typer.echo(f"  {name:18} real {measure['real']:.4f}  random {measure['if_random']:.4f}")
+    for title in ("real_orders", "shuffled_control", "planted_taste_SYNTHETIC"):
+        typer.echo(title)
+        for model, scores in report[title]["models"].items():
+            typer.echo(
+                f"  {model:16} Recall@10 {scores['recall_at_10']:.5f}  "
+                f"NDCG@10 {scores['ndcg_at_10']:.5f}  {scores['times_random']:.2f}x random"
+            )
+    typer.echo(f"Report: {path}")
+
+
+@app.command("metrics")
+def metrics_cmd() -> None:
+    """Regenerate docs/METRICS.md from the files that real runs wrote."""
+    from zap.config import REPO_ROOT
+    from zap.metrics.collect import NOT_RUN, collect
+    from zap.metrics.render import write
+
+    settings = get_settings()
+    metrics = collect(
+        settings.artifacts_dir,
+        REPO_ROOT / "eval" / "results",
+        settings.llm_replay_dir / "spend.jsonl",
+    )
+    write(metrics, REPO_ROOT / "docs" / "METRICS.md")
+    missing = [metric.name for metric in metrics if metric.value == NOT_RUN]
+    typer.echo(f"{len(metrics) - len(missing)} of {len(metrics)} metrics measured")
+    for name in missing:
+        typer.echo(f"  not run: {name}")
 
 
 @app.command("dq-report")

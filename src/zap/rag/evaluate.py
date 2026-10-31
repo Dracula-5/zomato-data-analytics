@@ -6,6 +6,8 @@ results by hand after seeing them, and a wording change in the documents shows u
 
 from __future__ import annotations
 
+import statistics
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -72,4 +74,20 @@ def evaluate_retrieval(
         report["modes"][mode] = scores
         misses[mode] = [q.id for q in questions if not recall_at(rankings[q.id], relevant[q.id], 5)]
     report["missed"] = misses
+    return report
+
+
+def measure_latency(retriever: Retriever, questions: list[GoldQuestion]) -> dict[str, Any]:
+    """Median seconds per search, timed one question at a time rather than divided from a total."""
+    timings: dict[str, list[float]] = {"hybrid": [], "hybrid_rerank": []}
+    for question in questions:
+        for mode, runs in timings.items():
+            started = time.perf_counter()
+            retriever.search(question.question, mode, 5)
+            runs.append(time.perf_counter() - started)
+    report: dict[str, Any] = {
+        mode: round(statistics.median(runs), 3) for mode, runs in timings.items()
+    }
+    report["questions"] = len(questions)
+    report["added_seconds"] = round(report["hybrid_rerank"] - report["hybrid"], 3)
     return report

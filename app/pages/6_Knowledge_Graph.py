@@ -98,7 +98,7 @@ if chosen is not None:
         )
     )
     bars.update_layout(title="Largest menu communities, by commonest name")
-    st.plotly_chart(style(bars, mode, height=420), use_container_width=True)
+    st.plotly_chart(style(bars, mode, height=420), width="stretch")
     table_view(communities, "Communities as a table")
 
     st.subheader("Dishes bought together")
@@ -124,7 +124,7 @@ if chosen is not None:
     st.dataframe(
         load("graph_outlier_tests", db),
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
         column_config={
             "test": "Test",
             "data": "Data",
@@ -145,7 +145,7 @@ if chosen is not None:
         "An example for one customer: restaurants with menus like ones they used, that they "
         "haven't tried. M10 audits whether any recommender can work on this data."
     )
-    st.dataframe(load("graph_recommendations", db), hide_index=True, use_container_width=True)
+    st.dataframe(load("graph_recommendations", db), hide_index=True, width="stretch")
 
     st.subheader("Most central restaurants (PageRank)")
     if "pagerank_vs_order_count" in scores:

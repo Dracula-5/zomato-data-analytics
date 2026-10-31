@@ -58,7 +58,12 @@ def usage_cmd() -> None:
 @ai_app.command("rag-eval")
 def rag_eval_cmd() -> None:
     """Measure retrieval on the golden set. Runs locally and costs nothing."""
-    from zap.rag.evaluate import check_golden, evaluate_retrieval, load_golden
+    from zap.rag.evaluate import (
+        check_golden,
+        evaluate_retrieval,
+        load_golden,
+        measure_latency,
+    )
 
     retriever = _retriever()
     questions = load_golden(REPO_ROOT / "eval" / "rag_golden.yml")
@@ -70,6 +75,9 @@ def rag_eval_cmd() -> None:
     for mode, scores in report["modes"].items():
         typer.echo(f"  {mode:14} recall@5 {scores['recall_at_5']:.3f}  MRR {scores['mrr']:.3f}")
     typer.echo(f"Report: {_save('rag_retrieval', report)}")
+    latency = measure_latency(retriever, questions)
+    typer.echo(f"  reranker adds {latency['added_seconds']} s a search")
+    typer.echo(f"Report: {_save('rag_latency', latency)}")
 
 
 @ai_app.command("rag-answers")

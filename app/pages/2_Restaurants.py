@@ -31,5 +31,5 @@ if db is not None:
         )
     )
     fig.update_layout(title=f"Top {n} restaurants by GMV in {city}", xaxis_title="GMV (₹)")
-    st.plotly_chart(style(fig, mode, height=max(320, 26 * len(shown))), use_container_width=True)
-    st.dataframe(top, hide_index=True, use_container_width=True)
+    st.plotly_chart(style(fig, mode, height=max(320, 26 * len(shown))), width="stretch")
+    st.dataframe(top, hide_index=True, width="stretch")

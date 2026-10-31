@@ -3390,7 +3390,7 @@ ai = [
 ]
 app = [
     { name = "plotly", specifier = ">=5.24" },
-    { name = "streamlit", specifier = ">=1.40" },
+    { name = "streamlit", specifier = ">=1.66" },
 ]
 cloud = [
     { name = "boto3", specifier = ">=1.43.122" },

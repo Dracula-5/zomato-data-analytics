@@ -1,30 +1,30 @@
 {
   "questions": 54,
-  "chunks": 153,
+  "chunks": 173,
   "modes": {
     "dense": {
-      "recall_at_5": 0.8704,
-      "mrr": 0.6694,
+      "recall_at_5": 0.8148,
+      "mrr": 0.6386,
       "recall_at_5_exact": 0.9444,
-      "recall_at_5_paraphrase": 0.8333
+      "recall_at_5_paraphrase": 0.75
     },
     "bm25": {
       "recall_at_5": 0.6852,
-      "mrr": 0.5692,
+      "mrr": 0.5342,
       "recall_at_5_exact": 0.8889,
       "recall_at_5_paraphrase": 0.5833
     },
     "hybrid": {
       "recall_at_5": 0.8519,
-      "mrr": 0.7462,
+      "mrr": 0.7247,
       "recall_at_5_exact": 1.0,
       "recall_at_5_paraphrase": 0.7778
     },
     "hybrid_rerank": {
-      "recall_at_5": 0.8704,
-      "mrr": 0.7277,
+      "recall_at_5": 0.8889,
+      "mrr": 0.703,
       "recall_at_5_exact": 0.9444,
-      "recall_at_5_paraphrase": 0.8333
+      "recall_at_5_paraphrase": 0.8611
     }
   },
   "missed": {
@@ -32,6 +32,9 @@
       "x18",
       "p01",
       "p09",
+      "p10",
+      "p14",
+      "p19",
       "p22",
       "p25",
       "p31",
@@ -57,7 +60,7 @@
       "p34"
     ],
     "hybrid": [
-      "p05",
+      "p02",
       "p13",
       "p22",
       "p24",
@@ -70,7 +73,6 @@
       "x18",
       "p05",
       "p06",
-      "p13",
       "p22",
       "p32",
       "p33"

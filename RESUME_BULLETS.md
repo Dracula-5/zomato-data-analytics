@@ -41,8 +41,8 @@ doesn't. If a metric changes, change the bullet. Pick the 3 or 4 that fit each a
 
 **GenAI**
 
-- Built hybrid retrieval over project documents and measured each stage, reaching 0.746 MRR against
-  0.669 for dense search, and dropped a reranker that added 2.2 s without improving results.
+- Built hybrid retrieval over project documents and measured each stage, reaching 0.725 MRR against
+  0.639 for dense search, and dropped a reranker that lowered MRR and added seconds to every search.
 - Built a LangGraph copilot with human approval and deterministic validation, plus a text-to-SQL
   guard that refuses 92 attacks, with a read-only connection as a second layer.
 

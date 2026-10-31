@@ -41,7 +41,7 @@ if db is not None:
             )
         )
         fig.update_layout(title=label, hovermode="x unified")
-        col.plotly_chart(style(fig, mode), use_container_width=True)
+        col.plotly_chart(style(fig, mode), width="stretch")
     table_view(daily)
 
     st.subheader("When do people order?")
@@ -57,7 +57,7 @@ if db is not None:
     heat.update_traces(
         hovertemplate="%{y} %{x}:00<br>Orders: %{z:,}<extra></extra>", xgap=2, ygap=2
     )
-    st.plotly_chart(style(heat, mode, height=300), use_container_width=True)
+    st.plotly_chart(style(heat, mode, height=300), width="stretch")
     st.caption(
         "Demand peaks at lunch (13:00) and dinner (19:00-20:00) and is higher at weekends: "
         "the main real signal in this synthetic dataset, used for capacity planning."

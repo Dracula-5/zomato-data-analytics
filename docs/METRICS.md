@@ -131,15 +131,15 @@ purpose to test a detector. The 5% sample is by user, and keeps each user's whol
 | Metric | Value | Data | Source | Ran |
 |---|---|---|---|---|
 | Recall@5, BM25 | **0.685** | Project documents | `eval/results/rag_retrieval.json` |  |
-| Recall@5, dense | **0.870** | Project documents | `eval/results/rag_retrieval.json` |  |
+| Recall@5, dense | **0.815** | Project documents | `eval/results/rag_retrieval.json` |  |
 | Recall@5, hybrid | **0.852** | Project documents | `eval/results/rag_retrieval.json` |  |
-| Recall@5, hybrid + rerank | **0.870** | Project documents | `eval/results/rag_retrieval.json` |  |
-| MRR, dense | **0.669** | Project documents | `eval/results/rag_retrieval.json` |  |
-| MRR, hybrid | **0.746** | Project documents | `eval/results/rag_retrieval.json` |  |
+| Recall@5, hybrid + rerank | **0.889** | Project documents | `eval/results/rag_retrieval.json` |  |
+| MRR, dense | **0.639** | Project documents | `eval/results/rag_retrieval.json` |  |
+| MRR, hybrid | **0.725** | Project documents | `eval/results/rag_retrieval.json` |  |
 | RAG faithfulness | **not run** | Project documents | `eval/results/rag_answers.json` |  |
 | Text-to-SQL execution accuracy | **not run** | Full data (synthetic-looking source) | `eval/results/text2sql.json` |  |
 | Routing accuracy, keyword baseline | **74.2%** | Golden questions | `eval/results/agent_routing.json` |  |
-| Time a reranker adds to a search | **2.2 s** | Project documents | `eval/results/rag_latency.json` |  |
+| Time a reranker adds to a search | **2.5 s** | Project documents; varies by run | `eval/results/rag_latency.json` |  |
 | Routing accuracy, LLM router | **not run** | Golden questions | `eval/results/agent_routing.json` |  |
 | Sentiment agreement with ratings | **not run** | Full data (synthetic-looking source) | `eval/results/enrichment.json` |  |
 
@@ -155,6 +155,6 @@ purpose to test a detector. The 5% sample is by user, and keeps each user's whol
 
 | Metric | Value | Data | Source | Ran |
 |---|---|---|---|---|
-| Tests passing | **557** | Local run | `artifacts/pytest.xml` |  |
+| Tests passing | **559** | Local run | `artifacts/pytest.xml` |  |
 | SQL attacks refused | **92** | Local run | `artifacts/pytest.xml` |  |
-| Line and branch coverage | **92.64%** | Local run | `artifacts/coverage.json` |  |
+| Line and branch coverage | **92.62%** | Local run | `artifacts/coverage.json` |  |

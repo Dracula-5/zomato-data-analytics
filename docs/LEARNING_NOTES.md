@@ -515,6 +515,7 @@ once. The DAG then replays one day per run (`{{ ds }}` = the run's logical date)
 | dbt_snapshot | SCD2 history of restaurants |
 | dbt_build | incremental MERGE of the facts (3-day lookback), marts, every dbt test |
 | quality_report | rules + GX + dbt test results into the governance tables |
+| publish_metrics | rewrite `docs/METRICS.md` from the files runs have left |
 
 `max_active_runs=1` because DuckDB allows one writer at a time. Past days are replayed
 with **`airflow backfill create`**, which runs through the real scheduler, one day after
@@ -1030,22 +1031,25 @@ templated by rating band. That changed two things. Enrichment labels each text o
 
 ### Search, measured stage by stage
 
-153 chunks from the data dictionary, these notes, the setup guide and the quality rules. 54 golden
+173 chunks from the data dictionary, these notes, the setup guide and the quality rules. 54 golden
 questions: 18 name something exact, and 36 are deliberately paraphrased to avoid the document's own
 words. A chunk counts as relevant when it contains the question's evidence phrase, so nobody judges
 results after seeing them. All of this runs locally.
 
 | Stage | Recall@5 | MRR | Recall@5, exact | Recall@5, paraphrased |
 |---|---|---|---|---|
-| BM25 | 0.685 | 0.569 | 0.889 | 0.583 |
-| Dense | 0.870 | 0.669 | 0.944 | 0.833 |
-| Hybrid | 0.852 | 0.746 | 1.000 | 0.778 |
-| Hybrid + rerank | 0.870 | 0.728 | 0.944 | 0.833 |
+| BM25 | 0.685 | 0.534 | 0.889 | 0.583 |
+| Dense | 0.815 | 0.639 | 0.944 | 0.750 |
+| Hybrid | 0.852 | 0.725 | 1.000 | 0.778 |
+| Hybrid + rerank | 0.889 | 0.703 | 0.944 | 0.861 |
 
 Hybrid ranks best and is the only stage to find every exact identifier, which matters for rule
-names. **The reranker didn't earn its place:** it added 2.2 seconds a question on CPU, taking a
-search from 0.05 s to 2.26 s, and didn't improve on hybrid, so answers don't use it. Two cautions: a one-question gap on 54 questions isn't
-significant, and I wrote both the questions and the documents, which flatters every stage.
+names. **The reranker didn't earn its place:** on top of a search that takes about 0.1 s it added
+2.2 to 4.0 seconds a question on CPU across runs on this laptop, depending on what else was running.
+It also lowered MRR and lost one exact identifier, so answers don't use it. Its higher recall is two
+questions, and two cautions apply to every row here: a gap of one or two questions on 54 isn't
+significant, and I wrote both the questions and the documents, which flatters every stage. These
+numbers also depend on the documents, so `zap ai rag-eval` has to be re-run whenever they change.
 
 ### The SQL guard
 
@@ -1169,7 +1173,15 @@ bullets isn't in METRICS.md.
    loads now write their own file.
 2. **A shuffled control was labelled as planted data.** Nothing was planted there.
 3. **A reranker time of "about 3 seconds" came from dividing a total, not from measuring.** Timing it
-   gave 2.2 s, after the wrong figure had reached three documents.
+   gave 2.2 s on the corpus of that day, after the wrong figure had reached three documents. The
+   script doing the timing wasn't in the repo either, so a clone couldn't repeat it. It is part of
+   `zap ai rag-eval` now.
+4. **Retrieval scores went stale without any code changing.** Search runs over these documents, and
+   they kept growing after the M8 measurement: 153 chunks became 173 and hybrid MRR went from 0.746
+   to 0.725. Re-measuring before release caught it, and hybrid was still the best stage.
+5. **The data dictionary still said the password was dropped in staging.** It had been dropped at
+   ingestion since M5, and nobody had regenerated the file. The view written for text-to-SQL was
+   missing from it too. Generated files need regenerating, or a check that they are current.
 
 ### One slowdown stayed unexplained
 

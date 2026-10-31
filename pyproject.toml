@@ -28,7 +28,7 @@ ai = [
 ]
 app = [
     "plotly>=5.24",
-    "streamlit>=1.40",
+    "streamlit>=1.66",
 ]
 cloud = [
     "boto3>=1.43.122",

@@ -31,7 +31,7 @@ if db is not None:
         )
     )
     fig.update_layout(title="Top 15 cities by GMV", xaxis_title="GMV (₹)")
-    st.plotly_chart(style(fig, mode, height=480), use_container_width=True)
+    st.plotly_chart(style(fig, mode, height=480), width="stretch")
     table_view(cities, "All cities as a table")
 
     city = st.selectbox("City trend", cities["city"].tolist())
@@ -46,4 +46,4 @@ if db is not None:
         )
     )
     line.update_layout(title=f"Orders per day, {city}", hovermode="x unified")
-    st.plotly_chart(style(line, mode), use_container_width=True)
+    st.plotly_chart(style(line, mode), width="stretch")

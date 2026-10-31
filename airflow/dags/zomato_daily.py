@@ -14,6 +14,7 @@ pipeline. Every task is idempotent, so re-running a day gives the same warehouse
 | dbt_snapshot | SCD2 history of restaurants |
 | dbt_build | incremental MERGE of the facts, marts, all dbt tests |
 | quality_report | DuckDB only: rules + GX + dbt test results into the governance tables |
+| publish_metrics | DuckDB only: rewrite docs/METRICS.md from the files runs have left |
 
 `zomato_daily` runs on a 5% sample in local DuckDB and costs nothing. `zomato_daily_snowflake`
 runs on the full data, **uses S3 and Snowflake credits**, and needs the credentials in
@@ -107,8 +108,16 @@ with daily_dag(
     dbt_snapshot = zap_task("dbt_snapshot", f"dbt {DS} snapshot")
     dbt_build = zap_task("dbt_build", f"dbt {DS} build --exclude resource_type:snapshot", 30)
     quality_report = zap_task("quality_report", f"dq-report {DS}", timeout_min=5)
+    publish_metrics = zap_task("publish_metrics", "metrics", timeout_min=5)
 
-    validated_partition() >> load_raw >> dbt_snapshot >> dbt_build >> quality_report
+    (
+        validated_partition()
+        >> load_raw
+        >> dbt_snapshot
+        >> dbt_build
+        >> quality_report
+        >> publish_metrics
+    )
 
 with daily_dag(
     "zomato_daily_snowflake",

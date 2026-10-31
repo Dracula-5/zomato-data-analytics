@@ -30,7 +30,7 @@ def show(result: dict) -> None:  # type: ignore[type-arg]
     checks = result.get("checks", [])
     passed = bool(checks) and all(check["passed"] for check in checks)
     if passed and len(rows) > 1 and not result.get("text"):
-        st.dataframe(rows, hide_index=True, use_container_width=True)
+        st.dataframe(rows, hide_index=True, width="stretch")
     else:
         st.markdown(result.get("answer", ""))
     for check in checks:

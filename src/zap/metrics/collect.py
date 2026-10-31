@@ -770,7 +770,7 @@ def ai_metrics(src: Sources) -> list[Metric]:
             group,
             "Time a reranker adds to a search",
             show(dig(latency, "added_seconds"), lambda v: f"{float(v):.1f} s"),
-            docs,
+            f"{docs}; varies by run",
             "eval/results/rag_latency.json",
         )
     )

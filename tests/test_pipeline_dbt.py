@@ -181,12 +181,13 @@ def test_data_dictionary_covers_models_and_classification(
     assert "### marts.fct_orders" in text and "### raw.users" in text
     assert "| email_masked | VARCHAR | pii |" in text
     assert "| password |" not in text  # dropped at ingestion, so not in any table
+    assert "never stored: `password` (secret)" in text
 
 
 def test_dq_report_cli_rebuilds_the_same_report(
     pipeline: tuple[Settings, PipelineRun, FixtureResult], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`zap dq-report` (the DAG's last task) must agree with the report `run_local` wrote;
+    """`zap dq-report` (a task in the DAG) must agree with the report `run_local` wrote;
     the GX part goes through GxReport.from_json, so this also checks the JSON round trip."""
     settings, _, _ = pipeline
     for var, path in (

@@ -54,7 +54,6 @@ Registered customers with demographic attributes. Contains personal data, so the
 | user_id | VARCHAR | internal | Customer identifier (pseudonymous key used by orders). |
 | name | VARCHAR | pii | Customer full name. |
 | email | VARCHAR | pii | Customer email address. |
-| password | VARCHAR | secret | Account password as stored in the source (plain text). Never propagated past the raw layer; dropped in staging. |
 | Age | VARCHAR | internal | Customer age in years. |
 | Gender | VARCHAR | pii | Self-reported gender. |
 | Marital Status | VARCHAR | pii | Self-reported marital status. |
@@ -62,6 +61,8 @@ Registered customers with demographic attributes. Contains personal data, so the
 | Monthly Income | VARCHAR | pii | Monthly income bracket as text. |
 | Educational Qualifications | VARCHAR | internal | Highest educational qualification. |
 | Family size | VARCHAR | internal | Number of people in the household. |
+
+In the source file but never stored: `password` (secret). Account password as stored in the source (plain text). Dropped at ingestion: it is never written to the lake, S3 or any warehouse.
 
 ### raw.orders
 
@@ -148,6 +149,22 @@ Free-text customer reviews (SYNTHETIC; the real file has only 294 distinct comme
 | first_order_date | DATE |  |  | Date of the first order. |
 | last_order_date | DATE |  |  | Date of the latest order. |
 | lifetime_orders | BIGINT |  |  | Orders placed (including cancelled and refunded). |
+
+### marts.dim_customer_public
+
+*view*. dim_customer with no email columns, even masked. The only customer table that generated SQL may read.
+
+| Column | Type | Classification | Tests | Description |
+|---|---|---|---|---|
+| customer_id | BIGINT |  | not_null, unique | Customer key. |
+| age_band | VARCHAR |  |  | Age group, or unknown. |
+| occupation | VARCHAR |  |  | Self-reported occupation. |
+| education | VARCHAR |  |  | Self-reported education. |
+| family_size | INTEGER |  |  | Self-reported household size. |
+| is_registered | BOOLEAN |  |  | True when the customer exists in the users file. |
+| first_order_date | DATE |  |  | Date of the first order. |
+| last_order_date | DATE |  |  | Date of the latest order. |
+| lifetime_orders | BIGINT |  |  | Orders placed, of any status. |
 
 ### marts.dim_date
 

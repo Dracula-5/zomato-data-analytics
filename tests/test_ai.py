@@ -359,6 +359,13 @@ def test_retrieval_report_scores_each_mode(retriever: Retriever) -> None:
     assert "recall_at_5_exact" in report["modes"]["dense"]
 
 
+def test_latency_is_timed_per_search(retriever: Retriever) -> None:
+    question = rag_eval.GoldQuestion("q1", "exact", "ORD_AMOUNT_MISMATCH", "sales amount")
+    report = rag_eval.measure_latency(retriever, [question])
+    assert report["questions"] == 1
+    assert report["added_seconds"] == round(report["hybrid_rerank"] - report["hybrid"], 3)
+
+
 def good_answer(_: str) -> str:
     return '{"found": true, "answer": "ETS won.", "citations": [1]}'
 

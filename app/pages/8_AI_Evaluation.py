@@ -34,4 +34,4 @@ if page_setup("AI Evaluation") is not None:
                 "Source": [m.source for m in rows],
             }
         )
-        st.dataframe(table, hide_index=True, use_container_width=True)
+        st.dataframe(table, hide_index=True, width="stretch")

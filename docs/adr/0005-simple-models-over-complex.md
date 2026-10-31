@@ -25,8 +25,9 @@ turned out to be popularity: it scores about 6 times random on shuffled orders t
 in them, and the real and shuffled results overlap. On planted taste the same code scores far
 higher, so the method works and the data has no taste to learn.
 
-**Search: no reranker.** Hybrid retrieval ranks best on the golden questions. The reranker added
-2.2 seconds a question on CPU, taking a search from 0.05 s to 2.26 s, and didn't improve on it.
+**Search: no reranker.** Hybrid retrieval ranks best on the golden questions, and a search takes
+about 0.1 s. The reranker added 2.2 to 4.0 seconds a question on CPU across runs and lowered MRR.
+Its higher recall is two questions of 54, which isn't a real difference.
 
 **Bad:** the project shows fewer fashionable techniques. The trade is worth it, because being able
 to explain why a model isn't needed is rarer than being able to fit one.

@@ -42,12 +42,12 @@ if db is not None:
         )
     )
     fig.update_layout(title="Records caught by each rule", xaxis_title="Records")
-    st.plotly_chart(style(fig, mode, height=max(300, 34 * len(fired))), use_container_width=True)
+    st.plotly_chart(style(fig, mode, height=max(300, 34 * len(fired))), width="stretch")
     st.subheader("Rule catalogue")
-    st.dataframe(rules, hide_index=True, use_container_width=True)
+    st.dataframe(rules, hide_index=True, width="stretch")
 
     st.subheader("Great Expectations (pre-load gate)")
-    st.dataframe(gx, hide_index=True, use_container_width=True)
+    st.dataframe(gx, hide_index=True, width="stretch")
     st.subheader("Schema drift (latest check per source)")
     log = get_settings().artifacts_dir / "governance" / "schema_drift_log.jsonl"
     st.dataframe(load("latest_drift", log) if log.exists() else None, hide_index=True)

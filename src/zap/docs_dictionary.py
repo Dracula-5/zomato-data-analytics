@@ -59,6 +59,14 @@ def render_dictionary(
             f"| {col.name} | {col.type} | {col.classification} | {_cell(col.description)} |"
             for col in c.stored_columns
         ]
+        dropped = [col for col in c.columns if col not in c.stored_columns]
+        if dropped:
+            lines.append("")
+        lines += [
+            f"In the source file but never stored: `{col.name}` ({col.classification}). "
+            f"{_cell(col.description)}"
+            for col in dropped
+        ]
         lines.append("")
 
     tests = _tests_by_column(manifest)

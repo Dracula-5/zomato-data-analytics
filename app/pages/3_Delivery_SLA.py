@@ -32,7 +32,7 @@ if db is not None:
         hovertemplate=f"%{{y}} at %{{x}}:00<br>%{{z:{fmt}}}<extra></extra>", xgap=2, ygap=2
     )
     heat.update_layout(title="Busiest 12 cities by hour of day")
-    st.plotly_chart(style(heat, mode, height=420), use_container_width=True)
+    st.plotly_chart(style(heat, mode, height=420), width="stretch")
     spread = sla[measure].max() - sla[measure].min()
     st.info(
         f"Spread across all city-hour cells: {spread:{fmt}}. In this SYNTHETIC dataset delivery "

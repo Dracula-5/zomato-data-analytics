@@ -52,4 +52,4 @@ def load(name: str, db: Path, *args: Any) -> Any:
 
 def table_view(frame: pd.DataFrame, label: str = "Show the data as a table") -> None:
     with st.expander(label):
-        st.dataframe(frame, hide_index=True, use_container_width=True)
+        st.dataframe(frame, hide_index=True, width="stretch")

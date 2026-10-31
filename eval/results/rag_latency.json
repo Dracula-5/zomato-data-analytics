@@ -1,6 +1,6 @@
 {
-  "hybrid": 0.05,
-  "hybrid_rerank": 2.259,
+  "hybrid": 0.055,
+  "hybrid_rerank": 2.582,
   "questions": 54,
-  "added_seconds": 2.209
+  "added_seconds": 2.527
 }

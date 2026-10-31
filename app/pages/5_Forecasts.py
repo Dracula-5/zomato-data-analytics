@@ -97,7 +97,7 @@ if db is not None:
         hovertemplate=f"Forecast: {unit}%{{y:,.0f}}<extra></extra>",
     )
     fig.update_layout(title=f"{METRIC_NAMES[metric]} per day, {scope}", hovermode="x unified")
-    st.plotly_chart(style(fig, mode, height=400), use_container_width=True)
+    st.plotly_chart(style(fig, mode, height=400), width="stretch")
     table_view(accuracy, "Accuracy as a table")
 
     st.subheader("Anomaly detection")
@@ -135,7 +135,7 @@ if db is not None:
         title="Same-weekday detector: share of injected days found",
         xaxis={"range": [0, 1.12], "tickformat": ".0%", "tickvals": [0, 0.25, 0.5, 0.75, 1]},
     )
-    st.plotly_chart(style(bars, mode, height=340), use_container_width=True)
+    st.plotly_chart(style(bars, mode, height=340), width="stretch")
 
     flagged = load("real_anomalies", db)
     st.write(

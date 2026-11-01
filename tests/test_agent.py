@@ -399,16 +399,23 @@ def test_the_page_answers_a_free_question(
     monkeypatch.setenv("ARTIFACTS_DIR", str(settings.artifacts_dir))
     monkeypatch.setenv("LLM_REPLAY_DIR", str(settings.llm_replay_dir))
     get_settings.cache_clear()
-    page = AppTest.from_file(str(REPO_ROOT / "app/pages/7_Copilot.py"), default_timeout=120).run()
+    page = AppTest.from_file(str(REPO_ROOT / "app/views/7_Copilot.py"), default_timeout=120).run()
     assert not page.exception
-    page.text_input[0].set_value("Which chains were found?").run()
-    page.button[0].click().run()
+    examples = [button.label for button in page.main.button]
+    assert "Which restaurant chains did the graph find?" in examples
+
+    page.chat_input[0].set_value("Which chains were found?").run()
     assert not page.exception
     assert any("Pizza Hut" in m.value for m in page.markdown)  # one row reads as text
-    assert any("Passed: result is not empty" in m.value for m in page.markdown)
+    assert any("passed: result is not empty" in c.value for c in page.caption)
+    assert not page.main.button  # the examples make way for the conversation
 
-    page.text_input[0].set_value("Show the restaurant communities").run()
-    page.button[0].click().run()
-    get_settings.cache_clear()
+    page.chat_input[0].set_value("Show the restaurant communities").run()
     assert not page.exception
     assert len(page.dataframe) == 1  # several rows become a table
+
+    page.sidebar.button[0].click().run()  # New chat
+    get_settings.cache_clear()
+    assert not page.exception
+    assert not page.dataframe
+    assert [button.label for button in page.main.button] == examples

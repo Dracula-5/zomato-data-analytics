@@ -1,0 +1,686 @@
+{
+  "questions": 54,
+  "answered": 50,
+  "answered_rate": 0.9259,
+  "cited_the_evidence_rate": 0.8519,
+  "faithful_rate": 0.86,
+  "unanswerable_questions": 6,
+  "declined_unanswerable": 6,
+  "results": [
+    {
+      "id": "x01",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "ORD_AMOUNT_MISMATCH checks whether `sales_amount` differs from `subtotal - discount + delivery_fee + gst` in the `orders` table. It has error severity, and failing records are quarantined.",
+      "cited": [
+        "dq_rules#ORD_AMOUNT_MISMATCH"
+      ]
+    },
+    {
+      "id": "x02",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "ITM_PRICE_ROUNDED is a data-quality rule for `order_items`. It flags cases where `line_amount` exceeds `price \u00d7 quantity` by up to \u20b91 per unit, because `price` is a rounded display value. Its severity is informational, and the action is to flag the record.",
+      "cited": [
+        "dq_rules#ITM_PRICE_ROUNDED",
+        "LEARNING_NOTES#40.1"
+      ]
+    },
+    {
+      "id": "x03",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "REV_BEFORE_ORDER means a review is dated before its associated order. It applies to the reviews table and is a warning-level data quality rule; the action is to flag it.",
+      "cited": [
+        "dq_rules#REV_BEFORE_ORDER"
+      ]
+    },
+    {
+      "id": "x04",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "MENU_DUPLICATE_ITEM detects when the same food item is listed more than once by the same restaurant, indicating extra menu listings.",
+      "cited": [
+        "dq_rules#MENU_DUPLICATE_ITEM"
+      ]
+    },
+    {
+      "id": "x05",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "RST_NO_RATING flags restaurant records where the rating is hidden ('--') or missing. It has info severity.",
+      "cited": [
+        "dq_rules#RST_NO_RATING"
+      ]
+    },
+    {
+      "id": "x06",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "USR_DUPLICATE_EMAIL finds users whose email address is shared with another user, indicating extra or duplicate accounts.",
+      "cited": [
+        "dq_rules#USR_DUPLICATE_EMAIL",
+        "LEARNING_NOTES#41.2"
+      ]
+    },
+    {
+      "id": "x07",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "ORD_SUBTOTAL_MISMATCH compares an order\u2019s subtotal with the sum of its line amounts.",
+      "cited": [
+        "dq_rules#ORD_SUBTOTAL_MISMATCH"
+      ]
+    },
+    {
+      "id": "x08",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "`lookback_days` controls how many recent order dates `fct_orders` reprocesses on each incremental run. Those rows are MERGEd by `order_id`, so existing orders can be updated and newly arrived orders inserted. The window helps capture late-arriving or corrected orders.",
+      "cited": [
+        "DATA_DICTIONARY#18.0",
+        "LEARNING_NOTES#23.0"
+      ]
+    },
+    {
+      "id": "x09",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "`make cloud-destroy` deletes the S3 bucket, all objects in it, and the IAM role. It does not automatically drop the Snowflake `ZOMATO` database or integration; the warehouse stops itself.",
+      "cited": [
+        "CLOUD_SETUP#11.0"
+      ]
+    },
+    {
+      "id": "x10",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "ZAP_SVC signs in using an RSA key pair only. It has no password and cannot use the Snowflake web UI.",
+      "cited": [
+        "CLOUD_SETUP#6.0",
+        "LEARNING_NOTES#54.0"
+      ]
+    },
+    {
+      "id": "x11",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The column `f_id` in `raw.food` contains the food item identifier, such as \u201cfd123\u201d.",
+      "cited": [
+        "DATA_DICTIONARY#1.0"
+      ]
+    },
+    {
+      "id": "x12",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": false,
+      "unsupported_claims": [
+        "That the 10-second JWT leeway was the default leeway; the passage only states that the clock skew exceeded JWT\u2019s 10-second leeway."
+      ],
+      "answer": "`AIRFLOW__API_AUTH__JWT_LEEWAY` is set to 60 seconds because Docker Desktop\u2019s WSL 2 clock was 12.6 seconds behind Windows and periodically stepped backward. Airflow rejected task JWTs as \u201cnot yet valid (iat)\u201d when the clock difference exceeded the default 10-second leeway. The setting accommodates this local clock skew.",
+      "cited": [
+        "LEARNING_NOTES#49.1"
+      ]
+    },
+    {
+      "id": "x13",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The project uses Neo4j 5.26.31, with GDS 2.13.13. Both versions are pinned exactly.",
+      "cited": [
+        "LEARNING_NOTES#68.0"
+      ]
+    },
+    {
+      "id": "x14",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The formula is: `bucket = (user_id \u00d7 2654435761) mod 2\u00b3\u00b2 mod 10000`. A user is assigned to the sampling bucket produced by this calculation and kept in the 5% sample if `bucket < 500`.",
+      "cited": [
+        "LEARNING_NOTES#17.0"
+      ]
+    },
+    {
+      "id": "x15",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "`incremental_cutoff` makes filtering faster by computing the cutoff during model compilation, placing a literal date in the SQL. The optimizer can then recognize the date filter ahead of execution and skip old data, unlike a scalar `MAX(order_date)` subquery whose value is unknown until runtime. Combined with partitioning the staging window by date, this substantially improves pruning.",
+      "cited": [
+        "LEARNING_NOTES#23.0"
+      ]
+    },
+    {
+      "id": "x16",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The Neo4j `--reset` used `DETACH DELETE` in batches of 10,000 nodes. It ran out of memory because one batch could represent far more than 10,000 changes, such as the 36,464 restaurants associated with Chinese cuisine.",
+      "cited": [
+        "LEARNING_NOTES#76.0"
+      ]
+    },
+    {
+      "id": "x17",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The `alerts_smoke` DAG proves, on the real scheduler, that both alert callbacks work: a deliberate task failure triggers a failure alert, and a task that exceeds its deadline triggers a deadline alert. Both alerts are recorded with the DAG and run IDs.",
+      "cited": [
+        "LEARNING_NOTES#46.0",
+        "LEARNING_NOTES#47.0"
+      ]
+    },
+    {
+      "id": "x18",
+      "kind": "exact",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "`_batch_id` identifies the ingestion run or batch that produced a row. `_loaded_at` records when the row was loaded; it is used for source-freshness checks.",
+      "cited": [
+        "LEARNING_NOTES#15.0"
+      ]
+    },
+    {
+      "id": "p01",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Your first version barely saved time because predicate pushdown was blocked in two places: staging de-duplication partitioned only by `order_id`, so date filtering could not skip old data, and the cutoff was a runtime scalar subquery rather than a compile-time literal. Consequently, DuckDB still processed much of the old data. After partitioning by `order_date, order_id` and using `incremental_cutoff`, savings rose from 2.3% to 79.7%.",
+      "cited": [
+        "LEARNING_NOTES#23.0",
+        "LEARNING_NOTES#24.1"
+      ]
+    },
+    {
+      "id": "p02",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": false,
+      "supported": false,
+      "unsupported_claims": [
+        "Reprocessing a recent lookback window is recommended; the passages describe replacing data and rerunning it, but do not mention a lookback window or how recent it should be."
+      ],
+      "answer": "Reprocess a recent lookback window rather than only appending newly arrived rows. Replace each affected day\u2019s partition, use delete-then-insert or a primary-key `MERGE`, and let the snapshot capture changed values. These operations are idempotent, so rerunning recent data safely incorporates corrections without duplicates.",
+      "cited": [
+        "LEARNING_NOTES#44.0",
+        "LEARNING_NOTES#14.0"
+      ]
+    },
+    {
+      "id": "p03",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "No. Repeating the import is idempotent: it writes each table to a temporary folder, verifies the row count, and then replaces the old folder. Running it again produces the same lake rather than doubling the rows.",
+      "cited": [
+        "LEARNING_NOTES#16.0"
+      ]
+    },
+    {
+      "id": "p04",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "A user-level subset preserves each sampled shopper\u2019s complete order history, which the graph and recommender need. Random row sampling would fragment histories and could create orphaned reviews or order lines. User-level hashing also makes samples reproducible across systems, supports nested sample sizes, and keeps related records consistent.",
+      "cited": [
+        "LEARNING_NOTES#17.0"
+      ]
+    },
+    {
+      "id": "p05",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The warehouse reaches the storage bucket through Snowflake\u2019s storage integration, which assumes a read-only AWS IAM role using an external ID. No AWS keys or other long-lived credentials are stored in Snowflake. Terraform first creates the role with placeholder trust, then the integration generates the user and external ID, and Terraform tightens the role\u2019s trust policy.",
+      "cited": [
+        "CLOUD_SETUP#12.0",
+        "LEARNING_NOTES#53.0"
+      ]
+    },
+    {
+      "id": "p06",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Provisioning must happen in two passes because of a chicken-and-egg dependency. The Snowflake storage integration needs the IAM role\u2019s ARN, but the role\u2019s trust policy needs the Snowflake-generated user and external ID, which exist only after the integration is created. The first pass creates the role with placeholder trust; Snowflake then creates the integration and returns those values; the second pass tightens the role\u2019s trust policy.",
+      "cited": [
+        "LEARNING_NOTES#53.0"
+      ]
+    },
+    {
+      "id": "p07",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Use managed access schemas. Create the schema as managed access from the outset, make the deployment role its owner, and define future grants there. This lets the schema owner set permissions on new tables without requiring account-wide MANAGE GRANTS. Enabling managed access later requires MANAGE GRANTS.",
+      "cited": [
+        "LEARNING_NOTES#54.0",
+        "CLOUD_SETUP#12.0"
+      ]
+    },
+    {
+      "id": "p08",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The rate differed because the two engines handled numeric division and rounding differently. Snowflake\u2019s `NUMBER` division kept six decimal places, then the value was rounded again, effectively rounding twice. The fix was to perform division and averaging in `DOUBLE`, then round once in `DECIMAL`.",
+      "cited": [
+        "LEARNING_NOTES#58.0"
+      ]
+    },
+    {
+      "id": "p09",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Hashing addresses with a publicly known value allows someone to hash a list of known addresses and match the results, effectively reversing the hashes through guessing. A secret salt prevents this dictionary attack.",
+      "cited": [
+        "LEARNING_NOTES#29.0",
+        "LEARNING_NOTES#58.0"
+      ]
+    },
+    {
+      "id": "p10",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "No. Sorting by `order_date` reduced partitions scanned by 90% (from 26/26 or 24/24 to 2/21), but the median query time was essentially unchanged: 263 ms when sorted versus 262 ms as built and 303 ms shuffled. The decision was not to use clustering at that table size.",
+      "cited": [
+        "LEARNING_NOTES#57.0"
+      ]
+    },
+    {
+      "id": "p11",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "No. The data shows no holiday effect: Diwali and New Year look normal, so demand does not jump during festivals.",
+      "cited": [
+        "LEARNING_NOTES#60.0"
+      ]
+    },
+    {
+      "id": "p12",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": false,
+      "unsupported_claims": [
+        "That a gradient-boosted model built from decision trees predicts averages of values seen during training; the passages state this about a tree, but do not explicitly establish it for gradient-boosted models or identify LightGBM as such."
+      ],
+      "answer": "A gradient-boosted model built from decision trees predicts averages of values seen during training. Therefore, it cannot extrapolate beyond the training range and cannot predict a new all-time high on a growing series. In this setup, LightGBM predicts growth-relative values instead, while the recent level carries the upward trend.",
+      "cited": [
+        "LEARNING_NOTES#61.0"
+      ]
+    },
+    {
+      "id": "p13",
+      "kind": "paraphrase",
+      "found": false,
+      "cited_the_evidence": false,
+      "supported": null,
+      "unsupported_claims": [],
+      "answer": "The passages do not state a lowest achievable error for daily demand.",
+      "cited": []
+    },
+    {
+      "id": "p14",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "They used walk-forward backtesting: each of 8 folds cut the history before the model ran. Leakage was tested by multiplying every value after the cutoff by 50; forecasts for all three models had to remain unchanged. They also verified that `direct_rows` only shifted data backward, and fixed model settings in advance rather than tuning them on the test folds.",
+      "cited": [
+        "LEARNING_NOTES#62.0"
+      ]
+    },
+    {
+      "id": "p15",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The textbook outlier score uses a plain rolling z-score. Weekly demand swings inflate its standard deviation, making sudden falls\u2014especially 20% or 30% drops on quiet weekdays\u2014look statistically normal. Consequently, it detects almost none of these drops.",
+      "cited": [
+        "LEARNING_NOTES#65.0"
+      ]
+    },
+    {
+      "id": "p16",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Alerts would be of limited usefulness if real incidents were very rare because false alarms would dominate. At an incident rate of 1 day in 1,000, the detector\u2019s precision would fall to about 29%\u2014roughly 0.85 true alarms for every 2.08 false alarms. A team might therefore expect only a few alerts monthly, or raise the threshold while accepting lower recall.",
+      "cited": [
+        "LEARNING_NOTES#66.1",
+        "LEARNING_NOTES#65.0"
+      ]
+    },
+    {
+      "id": "p17",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "They used Louvain clustering on a graph of restaurants connected by menu overlap. The algorithm grouped outlets based on shared menus, not their names; brand names were consulted afterward only to validate the groups. This recovered cohesive groups for chains such as Domino\u2019s, Pizza Hut, and KFC.",
+      "cited": [
+        "LEARNING_NOTES#72.0",
+        "LEARNING_NOTES#71.0"
+      ]
+    },
+    {
+      "id": "p18",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Several labels may really be one business because different names share the same menu, usually in one or two cities, suggesting they are brands operated from shared kitchens. Examples include LunchBox, The Good Bowl, and Pure Veg Meals by Lunchbox, as well as several biryani labels. The data suggests this pattern but cannot prove common ownership.",
+      "cited": [
+        "LEARNING_NOTES#72.0"
+      ]
+    },
+    {
+      "id": "p19",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "No. PageRank/centrality added nothing beyond popularity: it correlated 0.98 with order counts, and on a random ordering graph centrality was simply popularity.",
+      "cited": [
+        "LEARNING_NOTES#72.0"
+      ]
+    },
+    {
+      "id": "p20",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": false,
+      "unsupported_claims": [
+        "The menus are described as \u201cfixed\u201d; the passages only state that restaurants sell from a small pool of dishes."
+      ],
+      "answer": "They were not a genuine habit because the data contained synthetic, random customer behavior: customers rarely repeated the same restaurant, and they ordered across many cities. The apparent dish pairings were mainly confounded by individual restaurants\u2019 small, fixed menus, not customer preference. When tested within restaurants, the associations disappeared.",
+      "cited": [
+        "LEARNING_NOTES#74.1",
+        "LEARNING_NOTES#69.0"
+      ]
+    },
+    {
+      "id": "p21",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Trust a \u201cnothing unusual\u201d result only when the test demonstrably had enough power to detect meaningful abnormalities. Plant synthetic outliers of known strengths and measure how often the test finds them, using the same full-data procedure. If detection is weak\u2014especially for smaller effects\u2014the zero result supports only a narrow claim, not that no problem exists.",
+      "cited": [
+        "LEARNING_NOTES#75.0"
+      ]
+    },
+    {
+      "id": "p22",
+      "kind": "paraphrase",
+      "found": false,
+      "cited_the_evidence": false,
+      "supported": null,
+      "unsupported_claims": [],
+      "answer": "The passages do not explain what made wiping the database crash.",
+      "cited": []
+    },
+    {
+      "id": "p23",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Repeating the identical analysis produced different numbers for two reasons: `GROUP BY` does not guarantee row order, so the random seed assigned outliers to different rows. After adding `ORDER BY`, GDS\u2019s Louvain algorithm still varied because it used multiple threads; Louvain repeats exactly only on one thread. Using one thread made the reports identical.",
+      "cited": [
+        "LEARNING_NOTES#77.1"
+      ]
+    },
+    {
+      "id": "p24",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": false,
+      "supported": false,
+      "unsupported_claims": [
+        "Cloud storage contains customer-related data, including customer records and email fields.",
+        "The upload process mirrors the data lake to S3."
+      ],
+      "answer": "Yes. Cloud storage contains customer-related data, including customer records and email fields. However, the documented policy says names and sensitive attributes are excluded; emails are masked or stored only as salted SHA-256 hashes. The upload process mirrors the data lake to S3.",
+      "cited": [
+        "CLOUD_SETUP#8.0",
+        "DATA_DICTIONARY#11.0"
+      ]
+    },
+    {
+      "id": "p25",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": false,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Business users are protected by multiple controls: analytics marts contain no names or sensitive attributes, only masked emails and salted hashes; an Enterprise masking policy prevents analysts from seeing even those fields; and the `ZAP_ANALYST` role has no access to raw or staging data, where raw PII could exist.",
+      "cited": [
+        "DATA_DICTIONARY#11.0",
+        "LEARNING_NOTES#55.0"
+      ]
+    },
+    {
+      "id": "p26",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Task authentication failed intermittently because Docker Desktop\u2019s WSL 2 clock was 12.6 seconds behind the Windows clock and was periodically stepped backward. This made JWT task tokens appear \u201cnot yet valid (iat),\u201d exceeding JWT\u2019s 10-second leeway. Retries sometimes recovered the runs. The fix was setting `AIRFLOW__API_AUTH__JWT_LEEWAY=60` in the local Docker Compose file.",
+      "cited": [
+        "LEARNING_NOTES#49.1"
+      ]
+    },
+    {
+      "id": "p27",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "A normal incremental build only merges the last three days, so the existing incremental tables retain sample rows instead of being rebuilt for the full dataset. Run one build with `--full-refresh` when switching from sample to full.",
+      "cited": [
+        "CLOUD_SETUP#8.0",
+        "LEARNING_NOTES#59.1"
+      ]
+    },
+    {
+      "id": "p28",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The ongoing monthly AWS bill for keeping the files in S3 is about $0.012 per month after the first month, until the storage is destroyed.",
+      "cited": [
+        "CLOUD_SETUP#1.0"
+      ]
+    },
+    {
+      "id": "p29",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": false,
+      "unsupported_claims": [
+        "It supports replaying one day per pipeline run."
+      ],
+      "answer": "The file layout has a folder per day because it uses Hive partitioning by date. This lets queries or loads for one day read only that day\u2019s folder instead of scanning all rows. It also mirrors the daily batch arrivals and supports replaying one day per pipeline run.",
+      "cited": [
+        "LEARNING_NOTES#15.0",
+        "LEARNING_NOTES#43.0"
+      ]
+    },
+    {
+      "id": "p30",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Charts were unreadable because Streamlit was forced into a light theme by a `[theme] font = ...` setting, while the chart code still followed the browser\u2019s dark-mode setting. This produced poor styling on a white page. Removing that configuration allowed proper theme handling.",
+      "cited": [
+        "LEARNING_NOTES#67.0",
+        "LEARNING_NOTES#94.0"
+      ]
+    },
+    {
+      "id": "p31",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": false,
+      "supported": false,
+      "unsupported_claims": [
+        "That reprocessing the affected reviews is a stated fix; the passage explicitly specifies determining membership from the source orders file, but does not state reprocessing such reviews as a fix."
+      ],
+      "answer": "A comment/review dated before its order was initially dropped because the order was not yet present. Since incremental processing only re-checked recent reviews, it was not picked up later and remained missing. The fix is to reprocess such reviews or determine membership from the source orders file rather than current load progress.",
+      "cited": [
+        "LEARNING_NOTES#48.0"
+      ]
+    },
+    {
+      "id": "p32",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "Tables that record events are fact tables: they typically have one row per event, such as an order, and include measures like amount and delivery time. Tables that describe things are dimension tables: they contain descriptive information about entities and contexts such as restaurants, customers, food, dates, and cities.",
+      "cited": [
+        "LEARNING_NOTES#22.0",
+        "LEARNING_NOTES#20.0"
+      ]
+    },
+    {
+      "id": "p33",
+      "kind": "paraphrase",
+      "found": false,
+      "cited_the_evidence": false,
+      "supported": null,
+      "unsupported_claims": [],
+      "answer": "The passages do not explain why artificial identifiers should not be generated for each record.",
+      "cited": []
+    },
+    {
+      "id": "p34",
+      "kind": "paraphrase",
+      "found": false,
+      "cited_the_evidence": false,
+      "supported": null,
+      "unsupported_claims": [],
+      "answer": "The passages do not explain why so few ordered dishes match a listing.",
+      "cited": []
+    },
+    {
+      "id": "p35",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "The seasonal naive forecast\u2014repeating last week\u2014is the simplest forecast, and any more complex model still has to beat it.",
+      "cited": [
+        "LEARNING_NOTES#61.0",
+        "LEARNING_NOTES#64.1"
+      ]
+    },
+    {
+      "id": "p36",
+      "kind": "paraphrase",
+      "found": true,
+      "cited_the_evidence": true,
+      "supported": true,
+      "unsupported_claims": [],
+      "answer": "One prediction is made directly for each future day because feeding predictions back recursively would cause errors to compound over successive forecast steps.",
+      "cited": [
+        "LEARNING_NOTES#61.0"
+      ]
+    }
+  ]
+}

@@ -3,8 +3,17 @@
 address = "localhost"
 port = 8501
 
+[client]
+# Hides the Deploy button: this runs on a laptop and is not deployed.
+toolbarMode = "minimal"
+
 [browser]
 gatherUsageStats = false
 
-# No [theme] section: setting any option there fixes the app to one theme and ignores the
-# viewer's light or dark setting, while the charts still follow it (see dashboard/ui.py).
+# Only [theme.light] and [theme.dark]: an option directly under [theme] fixes the app to one theme
+# and ignores the viewer's setting, while the charts still follow it (see dashboard/ui.py).
+[theme.light]
+primaryColor = "#2a78d6"
+
+[theme.dark]
+primaryColor = "#3987e5"

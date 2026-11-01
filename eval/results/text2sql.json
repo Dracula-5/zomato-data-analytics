@@ -1,0 +1,384 @@
+{
+  "questions": 36,
+  "execution_accuracy": 0.8889,
+  "ran_without_error": 1.0,
+  "needed_a_repair": 1,
+  "by_level": {
+    "easy": {
+      "correct": 12,
+      "questions": 12
+    },
+    "hard": {
+      "correct": 9,
+      "questions": 11
+    },
+    "medium": {
+      "correct": 11,
+      "questions": 13
+    }
+  },
+  "results": [
+    {
+      "id": "e01",
+      "level": "easy",
+      "question": "How many orders are there in total?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT SUM(orders) AS total_orders\nFROM marts.mart_daily_kpis",
+      "errors": []
+    },
+    {
+      "id": "e02",
+      "level": "easy",
+      "question": "What is the total GMV across the whole period?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT SUM(gmv) AS total_gmv\nFROM marts.mart_daily_kpis;",
+      "errors": []
+    },
+    {
+      "id": "e03",
+      "level": "easy",
+      "question": "What was the national average order value on 2026-06-30?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT aov\nFROM marts.mart_daily_kpis\nWHERE order_date = DATE '2026-06-30'",
+      "errors": []
+    },
+    {
+      "id": "e04",
+      "level": "easy",
+      "question": "How many cities are there?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT COUNT(*) AS city_count\nFROM marts.dim_city;",
+      "errors": []
+    },
+    {
+      "id": "e05",
+      "level": "easy",
+      "question": "Which 5 cities have the most restaurants? Rank them, most first.",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT city, restaurants\nFROM marts.dim_city\nORDER BY restaurants DESC\nLIMIT 5",
+      "errors": []
+    },
+    {
+      "id": "e06",
+      "level": "easy",
+      "question": "How many dishes are vegetarian?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT COUNT(*) AS vegetarian_dishes\nFROM marts.dim_food\nWHERE is_veg = TRUE",
+      "errors": []
+    },
+    {
+      "id": "e07",
+      "level": "easy",
+      "question": "How many customers are there in each age band?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  age_band,\n  COUNT(*) AS customer_count\nFROM marts.dim_customer_public\nGROUP BY age_band\nORDER BY age_band",
+      "errors": []
+    },
+    {
+      "id": "e08",
+      "level": "easy",
+      "question": "How many orders were placed with each payment method?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT payment_method, COUNT(*) AS orders\nFROM marts.fct_orders\nGROUP BY payment_method\nORDER BY payment_method",
+      "errors": []
+    },
+    {
+      "id": "e09",
+      "level": "easy",
+      "question": "Which 3 days had the most orders? Rank them, busiest first.",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  ROW_NUMBER() OVER (ORDER BY orders DESC, order_date ASC) AS rank,\n  order_date,\n  orders\nFROM marts.mart_daily_kpis\nORDER BY orders DESC, order_date ASC\nLIMIT 3",
+      "errors": []
+    },
+    {
+      "id": "e10",
+      "level": "easy",
+      "question": "Which data quality rules found at least one failing row?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT rule_id, table_name, description, severity, action, rows_checked, rows_failed, failed_pct, checked_at\nFROM governance.dq_results\nWHERE rows_failed > 0",
+      "errors": []
+    },
+    {
+      "id": "e11",
+      "level": "easy",
+      "question": "Which forecasting model has the lowest MAPE for national orders?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT model, mape\nFROM forecast.accuracy\nWHERE metric = 'orders'\n  AND scope = 'National'\nORDER BY mape ASC\nLIMIT 1",
+      "errors": []
+    },
+    {
+      "id": "e12",
+      "level": "easy",
+      "question": "What does the ETS model forecast for national orders on 2026-07-01?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT forecast\nFROM forecast.next_days\nWHERE metric = 'orders'\n  AND scope = 'National'\n  AND model = 'ets'\n  AND CAST(target_date AS DATE) = DATE '2026-07-01';",
+      "errors": []
+    },
+    {
+      "id": "m01",
+      "level": "medium",
+      "question": "What were the top 10 cities by GMV in June 2026? Rank them, highest first.",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT city, SUM(gmv) AS gmv\nFROM marts.mart_city_daily\nWHERE order_date >= DATE '2026-06-01'\n  AND order_date < DATE '2026-07-01'\nGROUP BY city\nORDER BY gmv DESC\nLIMIT 10",
+      "errors": []
+    },
+    {
+      "id": "m02",
+      "level": "medium",
+      "question": "How many orders were placed in each month of 2025? Show them in month order.",
+      "correct": true,
+      "ran": true,
+      "attempts": 2,
+      "sql": "SELECT\n  date_trunc('month', order_date)::DATE AS month_start,\n  SUM(orders) AS orders\nFROM marts.mart_daily_kpis\nWHERE order_date >= DATE '2025-01-01'\n  AND order_date < DATE '2026-01-01'\nGROUP BY 1\nORDER BY 1",
+      "errors": [
+        "Binder Error: Referenced column \"month_start\" not found in FROM clause!\nCandidate bindings: \"active_customers\", \"cancel_rate\", \"orders\", \"order_date\"\n\nLINE 1: ... AS DATE) AND order_date < CAST('2026-01-01' AS DATE) GROUP BY month_start ORDER BY month_start LIMIT 1000\n                                                                          ^^^^^^^^^^^"
+      ]
+    },
+    {
+      "id": "m03",
+      "level": "medium",
+      "question": "What share of orders is cancelled for each payment method?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  payment_method,\n  SUM(CASE WHEN is_cancelled THEN 1 ELSE 0 END)::DOUBLE / COUNT(*) AS cancelled_order_share\nFROM marts.fct_orders\nGROUP BY payment_method\nORDER BY payment_method",
+      "errors": []
+    },
+    {
+      "id": "m04",
+      "level": "medium",
+      "question": "On average, how many orders a day are placed on weekends, and how many on weekdays?",
+      "correct": false,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  CASE WHEN is_weekend THEN 'Weekend' ELSE 'Weekday' END AS day_type,\n  AVG(orders) AS average_orders_per_day\nFROM marts.mart_daily_kpis\nGROUP BY is_weekend\nORDER BY is_weekend DESC",
+      "errors": []
+    },
+    {
+      "id": "m05",
+      "level": "medium",
+      "question": "Which primary cuisine has the most restaurants?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT primary_cuisine, COUNT(*) AS restaurant_count\nFROM marts.dim_restaurant\nWHERE primary_cuisine IS NOT NULL\nGROUP BY primary_cuisine\nORDER BY restaurant_count DESC\nLIMIT 1",
+      "errors": []
+    },
+    {
+      "id": "m06",
+      "level": "medium",
+      "question": "What is the average delivery time in minutes of delivered orders, for each hour of day?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  order_hour,\n  AVG(delivery_time_min) AS average_delivery_time_min\nFROM marts.fct_orders\nWHERE is_delivered = TRUE\nGROUP BY order_hour\nORDER BY order_hour",
+      "errors": []
+    },
+    {
+      "id": "m07",
+      "level": "medium",
+      "question": "Which 5 restaurants in Bangalore have the highest GMV? Rank them, highest first.",
+      "correct": false,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT gmv_rank_in_city AS rank, restaurant_name, gmv\nFROM marts.mart_restaurant_performance\nWHERE city = 'Bangalore'\n  AND gmv_rank_in_city <= 5\nORDER BY gmv_rank_in_city ASC",
+      "errors": []
+    },
+    {
+      "id": "m08",
+      "level": "medium",
+      "question": "What is the 90th percentile delivery time in Mumbai for orders placed at 8pm?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT p90_delivery_min\nFROM marts.mart_delivery_sla\nWHERE city = 'Mumbai'\n  AND order_hour = 20",
+      "errors": []
+    },
+    {
+      "id": "m09",
+      "level": "medium",
+      "question": "What was the average review rating in Delhi in each month of 2025? Show them in month order.",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT review_month, avg_rating\nFROM marts.mart_review_insights\nWHERE city = 'Delhi'\n  AND review_month >= DATE '2025-01-01'\n  AND review_month < DATE '2026-01-01'\nORDER BY review_month",
+      "errors": []
+    },
+    {
+      "id": "m10",
+      "level": "medium",
+      "question": "How many reviews are dated before their own order?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT COALESCE(SUM(reviews_before_order), 0) AS reviews_dated_before_order\nFROM marts.mart_review_insights;",
+      "errors": []
+    },
+    {
+      "id": "m11",
+      "level": "medium",
+      "question": "What share of all orders was refunded?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT SUM(refunded_orders)::DOUBLE / NULLIF(SUM(orders), 0) AS refunded_order_share\nFROM marts.mart_city_daily;",
+      "errors": []
+    },
+    {
+      "id": "m12",
+      "level": "medium",
+      "question": "Which cities have at least 500,000 orders in total?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT city, SUM(orders) AS total_orders\nFROM marts.mart_city_daily\nGROUP BY city\nHAVING SUM(orders) >= 500000\nORDER BY total_orders DESC",
+      "errors": []
+    },
+    {
+      "id": "m13",
+      "level": "medium",
+      "question": "Which hour of the day has the most orders nationally?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT order_hour, COUNT(*) AS orders\nFROM marts.fct_orders\nGROUP BY order_hour\nORDER BY orders DESC, order_hour\nLIMIT 1",
+      "errors": []
+    },
+    {
+      "id": "h01",
+      "level": "hard",
+      "question": "Which 5 dishes sold the most units? Rank them with their names, most first.",
+      "correct": false,
+      "ran": true,
+      "attempts": 1,
+      "sql": "WITH dish_units AS (\n    SELECT\n        oi.food_id,\n        f.food_name,\n        SUM(oi.quantity) AS units_sold\n    FROM marts.fct_order_items AS oi\n    JOIN marts.dim_food AS f\n        ON oi.food_id = f.food_id\n    GROUP BY oi.food_id, f.food_name\n), ranked AS (\n    SELECT\n        food_name,\n        units_sold,\n        ROW_NUMBER() OVER (ORDER BY units_sold DESC, food_name) AS rank\n    FROM dish_units\n)\nSELECT rank, food_name, units_sold\nFROM ranked\nWHERE rank <= 5\nORDER BY rank",
+      "errors": []
+    },
+    {
+      "id": "h02",
+      "level": "hard",
+      "question": "What share of total GMV comes from the 10 cities with the highest GMV?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "WITH city_gmv AS (\n    SELECT city, SUM(gmv) AS gmv\n    FROM marts.mart_city_daily\n    GROUP BY city\n), top_10 AS (\n    SELECT SUM(gmv) AS top_10_gmv\n    FROM (\n        SELECT gmv\n        FROM city_gmv\n        ORDER BY gmv DESC\n        LIMIT 10\n    ) t\n), total AS (\n    SELECT SUM(gmv) AS total_gmv\n    FROM city_gmv\n)\nSELECT top_10.top_10_gmv / total.total_gmv AS top_10_city_gmv_share\nFROM top_10\nCROSS JOIN total",
+      "errors": []
+    },
+    {
+      "id": "h03",
+      "level": "hard",
+      "question": "What was the month-on-month percentage change in orders for each month of 2026? Show them in month order, as percentages.",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "WITH monthly_orders AS (\n    SELECT\n        date_trunc('month', order_date)::DATE AS month,\n        SUM(orders) AS orders\n    FROM marts.mart_daily_kpis\n    GROUP BY 1\n), changes AS (\n    SELECT\n        month,\n        (orders - LAG(orders) OVER (ORDER BY month)) * 100.0\n            / NULLIF(LAG(orders) OVER (ORDER BY month), 0) AS month_on_month_pct_change\n    FROM monthly_orders\n)\nSELECT\n    month,\n    month_on_month_pct_change\nFROM changes\nWHERE month >= DATE '2026-01-01'\n  AND month < DATE '2027-01-01'\nORDER BY month",
+      "errors": []
+    },
+    {
+      "id": "h04",
+      "level": "hard",
+      "question": "For each occupation, what is the average number of lifetime orders per customer?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT occupation, AVG(lifetime_orders) AS average_lifetime_orders_per_customer\nFROM marts.dim_customer_public\nGROUP BY occupation",
+      "errors": []
+    },
+    {
+      "id": "h05",
+      "level": "hard",
+      "question": "For each of the 3 cities with the most orders, which payment method is used most?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "WITH top_cities AS (\n    SELECT city\n    FROM marts.fct_orders\n    GROUP BY city\n    ORDER BY COUNT(*) DESC\n    LIMIT 3\n), payment_counts AS (\n    SELECT\n        o.city,\n        o.payment_method,\n        COUNT(*) AS order_count,\n        RANK() OVER (\n            PARTITION BY o.city\n            ORDER BY COUNT(*) DESC\n        ) AS payment_rank\n    FROM marts.fct_orders AS o\n    INNER JOIN top_cities AS t\n        ON o.city = t.city\n    GROUP BY o.city, o.payment_method\n)\nSELECT city, payment_method, order_count\nFROM payment_counts\nWHERE payment_rank = 1\nORDER BY order_count DESC, city",
+      "errors": []
+    },
+    {
+      "id": "h06",
+      "level": "hard",
+      "question": "What is the average sales amount of orders in which every dish is vegetarian?",
+      "correct": false,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT AVG(o.sales_amount) AS average_sales_amount\nFROM marts.fct_orders AS o\nJOIN marts.fct_order_items AS oi\n  ON o.order_id = oi.order_id\nJOIN marts.dim_food AS f\n  ON oi.food_id = f.food_id\nGROUP BY o.order_id, o.sales_amount\nHAVING BOOL_AND(f.is_veg = TRUE)",
+      "errors": []
+    },
+    {
+      "id": "h07",
+      "level": "hard",
+      "question": "What share of customers who have ordered have placed more than one order?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  COUNT(*) FILTER (WHERE lifetime_orders > 1)::DOUBLE / NULLIF(COUNT(*) FILTER (WHERE lifetime_orders > 0), 0) AS share_customers_more_than_one_order\nFROM marts.dim_customer_public",
+      "errors": []
+    },
+    {
+      "id": "h08",
+      "level": "hard",
+      "question": "How many restaurants rated at least 4.5 have at least 100 orders?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT COUNT(*) AS restaurant_count\nFROM marts.mart_restaurant_performance\nWHERE listed_rating >= 4.5\n  AND orders >= 100;",
+      "errors": []
+    },
+    {
+      "id": "h09",
+      "level": "hard",
+      "question": "On average, how many days after the order date is a review written?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT AVG(date_diff('day', order_date, review_date)) AS avg_days_after_order\nFROM marts.fct_reviews;",
+      "errors": []
+    },
+    {
+      "id": "h10",
+      "level": "hard",
+      "question": "In which month did national orders first average more than 10,000 a day?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  date_trunc('month', order_date)::DATE AS month\nFROM marts.mart_daily_kpis\nGROUP BY 1\nHAVING AVG(orders) > 10000\nORDER BY month\nLIMIT 1",
+      "errors": []
+    },
+    {
+      "id": "h11",
+      "level": "hard",
+      "question": "Among cities with at least 10,000 delivered orders, which has the highest share of deliveries later than the SLA?",
+      "correct": true,
+      "ran": true,
+      "attempts": 1,
+      "sql": "SELECT\n  city,\n  SUM(sla_breaches) / NULLIF(SUM(delivered_orders), 0) AS sla_breach_share\nFROM marts.mart_delivery_sla\nGROUP BY city\nHAVING SUM(delivered_orders) >= 10000\nORDER BY sla_breach_share DESC\nLIMIT 1",
+      "errors": []
+    }
+  ]
+}

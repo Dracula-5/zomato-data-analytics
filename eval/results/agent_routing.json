@@ -85,5 +85,41 @@
       }
     ]
   },
-  "llm_router": "not run"
+  "llm_router": {
+    "accuracy": 0.9677,
+    "confusion": {
+      "sql": {
+        "sql": 9,
+        "rag": 0,
+        "graph": 0,
+        "forecast": 1
+      },
+      "rag": {
+        "sql": 0,
+        "rag": 8,
+        "graph": 0,
+        "forecast": 0
+      },
+      "graph": {
+        "sql": 0,
+        "rag": 0,
+        "graph": 7,
+        "forecast": 0
+      },
+      "forecast": {
+        "sql": 0,
+        "rag": 0,
+        "graph": 0,
+        "forecast": 6
+      }
+    },
+    "wrong": [
+      {
+        "id": "s06",
+        "expected": "sql",
+        "got": "forecast",
+        "question": "How is GMV trending month by month in 2026?"
+      }
+    ]
+  }
 }

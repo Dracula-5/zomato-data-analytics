@@ -788,7 +788,7 @@ def ai_metrics(src: Sources) -> list[Metric]:
             group,
             "Sentiment agreement with ratings",
             show(dig(enrich, "agreement_with_rating_reviews"), share),
-            FULL,
+            f"{FULL}; templated texts",
             "eval/results/enrichment.json",
         )
     )
@@ -807,7 +807,13 @@ def llm_cost_metrics(src: Sources, ledger: Path) -> list[Metric]:
     return [
         Metric(group, "Total spent", money(total), "All paid calls", source),
         Metric(group, "Paid calls", count(len(entries)), "All paid calls", source),
-        Metric(group, "Cost per 1,000 enriched reviews", show(per_thousand, money), FULL, source),
+        Metric(
+            group,
+            "Cost per 1,000 enriched reviews",
+            show(per_thousand, money),
+            f"{FULL}; each template labelled once",
+            source,
+        ),
     ]
 
 

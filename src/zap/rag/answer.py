@@ -21,7 +21,7 @@ from zap.rag.evaluate import GoldQuestion, normal_text
 from zap.rag.retrieve import Retriever
 
 PASSAGES = 5
-# Measured on the golden set: reranking added 2.2 s a question on CPU and no better results.
+# Measured on the golden set: reranking added seconds a question on CPU and lowered MRR.
 SEARCH_MODE = "hybrid"
 ANSWER_PURPOSE = "rag_answer"
 JUDGE_PURPOSE = "rag_judge"

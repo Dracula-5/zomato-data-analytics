@@ -1,0 +1,17 @@
+{
+  "dataset": "full",
+  "reviews": 300000,
+  "distinct_texts": 294,
+  "calls_saved_by_deduplicating": 299706,
+  "agreement_with_rating_texts": 1.0,
+  "agreement_with_rating_reviews": 1.0,
+  "topics": {
+    "delivery": 48992,
+    "food": 42067,
+    "overall": 65599,
+    "packaging": 64930,
+    "price": 53310,
+    "service": 25102
+  },
+  "disagreements": []
+}

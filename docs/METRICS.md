@@ -7,7 +7,7 @@ The source data is **synthetic-looking**: it behaves like generated data, so res
 this dataset rather than real food delivery. Anything marked SYNTHETIC used events planted on
 purpose to test a detector. The 5% sample is by user, and keeps each user's whole history.
 
-**85 of 90 metrics have been measured.**
+**90 of 90 metrics have been measured.**
 
 ## Pipeline size and speed
 
@@ -134,27 +134,27 @@ purpose to test a detector. The 5% sample is by user, and keeps each user's whol
 | Recall@5, dense | **0.815** | Project documents | `eval/results/rag_retrieval.json` |  |
 | Recall@5, hybrid | **0.852** | Project documents | `eval/results/rag_retrieval.json` |  |
 | Recall@5, hybrid + rerank | **0.889** | Project documents | `eval/results/rag_retrieval.json` |  |
-| MRR, dense | **0.639** | Project documents | `eval/results/rag_retrieval.json` |  |
-| MRR, hybrid | **0.725** | Project documents | `eval/results/rag_retrieval.json` |  |
-| RAG faithfulness | **not run** | Project documents | `eval/results/rag_answers.json` |  |
-| Text-to-SQL execution accuracy | **not run** | Full data (synthetic-looking source) | `eval/results/text2sql.json` |  |
+| MRR, dense | **0.648** | Project documents | `eval/results/rag_retrieval.json` |  |
+| MRR, hybrid | **0.737** | Project documents | `eval/results/rag_retrieval.json` |  |
+| RAG faithfulness | **86.0%** | Project documents | `eval/results/rag_answers.json` |  |
+| Text-to-SQL execution accuracy | **88.9%** | Full data (synthetic-looking source) | `eval/results/text2sql.json` |  |
 | Routing accuracy, keyword baseline | **74.2%** | Golden questions | `eval/results/agent_routing.json` |  |
-| Time a reranker adds to a search | **2.5 s** | Project documents; varies by run | `eval/results/rag_latency.json` |  |
-| Routing accuracy, LLM router | **not run** | Golden questions | `eval/results/agent_routing.json` |  |
-| Sentiment agreement with ratings | **not run** | Full data (synthetic-looking source) | `eval/results/enrichment.json` |  |
+| Time a reranker adds to a search | **3.6 s** | Project documents; varies by run | `eval/results/rag_latency.json` |  |
+| Routing accuracy, LLM router | **96.8%** | Golden questions | `eval/results/agent_routing.json` |  |
+| Sentiment agreement with ratings | **100.0%** | Full data (synthetic-looking source); templated texts | `eval/results/enrichment.json` |  |
 
 ## LLM cost
 
 | Metric | Value | Data | Source | Ran |
 |---|---|---|---|---|
-| Total spent | **$0.0000** | All paid calls | `eval/replay/spend.jsonl` |  |
-| Paid calls | **0** | All paid calls | `eval/replay/spend.jsonl` |  |
-| Cost per 1,000 enriched reviews | **not run** | Full data (synthetic-looking source) | `eval/replay/spend.jsonl` |  |
+| Total spent | **$0.1021** | All paid calls | `eval/replay/spend.jsonl` |  |
+| Paid calls | **273** | All paid calls | `eval/replay/spend.jsonl` |  |
+| Cost per 1,000 enriched reviews | **$0.0001** | Full data (synthetic-looking source); each template labelled once | `eval/replay/spend.jsonl` |  |
 
 ## Engineering
 
 | Metric | Value | Data | Source | Ran |
 |---|---|---|---|---|
-| Tests passing | **559** | Local run | `artifacts/pytest.xml` |  |
+| Tests passing | **565** | Local run | `artifacts/pytest.xml` |  |
 | SQL attacks refused | **92** | Local run | `artifacts/pytest.xml` |  |
-| Line and branch coverage | **92.62%** | Local run | `artifacts/coverage.json` |  |
+| Line and branch coverage | **92.65%** | Local run | `artifacts/coverage.json` |  |

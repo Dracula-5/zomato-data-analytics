@@ -5,9 +5,9 @@ import streamlit as st
 
 from zap.config import get_settings
 from zap.dashboard.theme import series_color, style
-from zap.dashboard.ui import load, page_setup, table_view, theme_mode
+from zap.dashboard.ui import load, page_setup, theme_mode
 
-db = page_setup("Data quality")
+db = page_setup("Data quality", "What each layer of checks caught before the data was used.")
 if db is not None:
     mode = theme_mode()
     rules = load("dq_results", db)
@@ -42,13 +42,31 @@ if db is not None:
         )
     )
     fig.update_layout(title="Records caught by each rule", xaxis_title="Records")
+    fig.update_xaxes(range=[0, float(fired["rows_failed"].max()) * 1.12])  # room for the labels
     st.plotly_chart(style(fig, mode, height=max(300, 34 * len(fired))), width="stretch")
-    st.subheader("Rule catalogue")
-    st.dataframe(rules, hide_index=True, width="stretch")
 
-    st.subheader("Great Expectations (pre-load gate)")
-    st.dataframe(gx, hide_index=True, width="stretch")
-    st.subheader("Schema drift (latest check per source)")
-    log = get_settings().artifacts_dir / "governance" / "schema_drift_log.jsonl"
-    st.dataframe(load("latest_drift", log) if log.exists() else None, hide_index=True)
-    table_view(tests, "dbt test results by kind and status")
+    catalogue, expectations, drift, dbt_tests = st.tabs(
+        ["Rule catalogue", "Great Expectations", "Schema drift", "dbt tests"]
+    )
+    with catalogue:
+        st.dataframe(
+            rules,
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "failed_pct": st.column_config.ProgressColumn(
+                    "Share failed", format="%.2f%%", min_value=0, max_value=100
+                ),
+            },
+        )
+    with expectations:
+        st.caption("Runs before loading: an error-level failure stops the pipeline.")
+        st.dataframe(gx, hide_index=True, width="stretch")
+    with drift:
+        st.caption("The latest check per source. Day runs check headers and leave rows empty.")
+        log = get_settings().artifacts_dir / "governance" / "schema_drift_log.jsonl"
+        st.dataframe(
+            load("latest_drift", log) if log.exists() else None, hide_index=True, width="stretch"
+        )
+    with dbt_tests:
+        st.dataframe(tests, hide_index=True, width="stretch")

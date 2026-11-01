@@ -41,10 +41,13 @@ doesn't. If a metric changes, change the bullet. Pick the 3 or 4 that fit each a
 
 **GenAI**
 
-- Built hybrid retrieval over project documents and measured each stage, reaching 0.725 MRR against
-  0.639 for dense search, and dropped a reranker that lowered MRR and added seconds to every search.
+- Built hybrid retrieval over project documents and measured each stage, reaching 0.737 MRR against
+  0.648 for dense search, and dropped a reranker that lowered MRR and added seconds to every search.
 - Built a LangGraph copilot with human approval and deterministic validation, plus a text-to-SQL
   guard that refuses 92 attacks, with a read-only connection as a second layer.
+- Evaluated the AI on golden sets, reaching 88.9% text-to-SQL execution accuracy, 86.0% answer
+  faithfulness and 96.8% routing accuracy against a 74.2% keyword baseline, and found that results
+  written into a searched document were contaminating the test.
 
 ## How to talk about these
 
@@ -58,11 +61,15 @@ looked right and weren't.
 2. *"My first answer was wrong, and I said so."* The off-menu orders that were really missing data.
 3. *"15 times better than random was just popularity."* Why the baseline decides what a result means.
 4. *"I tried to break my own guard."* The whole-row query that would have leaked emails.
+5. *"Writing up my results changed my results."* Why evaluation commentary can't live in the index.
 
 **Don't claim these:**
 
-- Any text-to-SQL accuracy, answer faithfulness or LLM router score. They say "not run" until the
-  paid runs happen.
+- That 86.0% of answers are true. Faithfulness means supported by the retrieved passages, and a
+  wrong answer can pass it when the wrong passages come back.
+- A text-to-SQL score above 88.9%. Two of the four misses were correct answers, which is worth
+  saying out loud, but 88.9% is the number.
+- That 100% sentiment agreement means anything for real reviews. The texts are templates.
 - That the shared-kitchen groups are proven. The data shows one menu under several names, and
   doesn't show who owns them.
 - Any revenue or savings figure. Nothing measured supports one.

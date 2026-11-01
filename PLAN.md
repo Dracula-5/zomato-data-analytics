@@ -236,7 +236,9 @@ with a passing `make check` and a commit.
   *Done:* a 7-day backfill through the scheduler; a re-run of one day leaves every table's
   fingerprint identical; `tests/test_daily_replay.py` checks idempotency, and that
   day-by-day equals a full rebuild, in CI. SLAs became Deadline Alerts (Airflow 3).
-  enrich_reviews and dbt_build_ai join the DAG in M8, and publish_metrics in M11.
+  enrich_reviews and dbt_build_ai join the DAG in M8, and publish_metrics in M11. (Built differently:
+  enrichment stayed a command, because the reviews are 294 fixed templates, so one run labels them all
+  and a daily task would only replay the same answers.)
 - **M5:** ⚠ I warn before each paid step.
   - Terraform creates the bucket (private, encrypted) and the IAM role (two-phase trust:
     placeholder, then Snowflake's ARN and external ID).
@@ -366,8 +368,8 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 - [x] M5 Cloud: Terraform, S3, Snowflake
 - [x] M6 Forecasting + anomalies
 - [x] M7 Knowledge graph
-- [ ] M8 GenAI + evals (built; the paid evaluations are not run)
-- [ ] M9 Agentic Copilot + eval (built; the LLM router score is not run)
+- [x] M8 GenAI + evals
+- [x] M9 Agentic Copilot + eval
 - [x] M10 Recsys audit
-- [x] M11 Metrics, docs, deliverables (5 metrics wait on the paid runs)
+- [x] M11 Metrics, docs, deliverables
 - [ ] B7 image classifier: recommended cut (D3)

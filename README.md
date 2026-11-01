@@ -24,6 +24,8 @@ The most useful results came from checking things that looked true.
 | 4,595 cancel-heavy restaurants | None, of 148,103 tested | Correcting for testing thousands at once |
 | The recommender beats random 15 times over | Popularity, not taste | Running it on shuffled orders |
 | LightGBM would beat a simple model | ETS already sits on the noise floor | Estimating the best possible error first |
+| 100% sentiment accuracy | 294 templated sentences, so it says little | Reading what the model was given |
+| A judge that clears an answer means it's right | It can pass a wrong answer built on the wrong passages | Checking the citations separately |
 
 What held up: chains and what look like shared-kitchen brands, found from menus alone with no names
 given to the algorithm.
@@ -86,9 +88,13 @@ so tests and CI can't spend anything.
 
 ## Status
 
-Everything is built and tested, and 5 metrics are waiting on paid model calls: text-to-SQL accuracy,
-answer faithfulness, the LLM router, review enrichment and its cost. They show "not run" until then.
-The code that produces them is tested with a fake model.
+Everything is built, tested and measured. The paid evaluations cost about $0.10 of a $2 budget:
+88.9% text-to-SQL accuracy, 86.0% answer faithfulness, and 96.8% routing accuracy against a 74.2%
+keyword baseline. [docs/EVALUATION.md](docs/EVALUATION.md) goes through the misses and what these
+numbers can't tell you.
+
+The dashboard's copilot replays saved answers by default. `LLM_MODE=live make app` lets it answer new
+questions, which makes small paid calls, and it shows the spend and stops at `LLM_BUDGET_USD`.
 
 ## Screenshots
 
@@ -105,6 +111,7 @@ The code that produces them is tested with a fake model.
 | Document | What's in it |
 |---|---|
 | [METRICS.md](docs/METRICS.md) | Every measured result, with its source file |
+| [EVALUATION.md](docs/EVALUATION.md) | The AI scores, the misses, and what they can't tell you |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the system fits together, and its security controls |
 | [BUSINESS_CASE.md](docs/BUSINESS_CASE.md) | What this is worth, and what the data can't support |
 | [Decision records](docs/adr/) | The five choices that shaped the project |

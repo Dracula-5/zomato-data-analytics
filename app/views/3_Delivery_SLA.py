@@ -6,7 +6,7 @@ import streamlit as st
 from zap.dashboard.theme import sequential_scale, style
 from zap.dashboard.ui import load, page_setup, table_view, theme_mode
 
-db = page_setup("Delivery SLA")
+db = page_setup("Delivery SLA", "How fast orders arrive, by city and hour.")
 if db is not None:
     mode = theme_mode()
     measure = st.radio(
@@ -32,6 +32,7 @@ if db is not None:
         hovertemplate=f"%{{y}} at %{{x}}:00<br>%{{z:{fmt}}}<extra></extra>", xgap=2, ygap=2
     )
     heat.update_layout(title="Busiest 12 cities by hour of day")
+    heat.update_xaxes(dtick=3)
     st.plotly_chart(style(heat, mode, height=420), width="stretch")
     spread = sla[measure].max() - sla[measure].min()
     st.info(

@@ -389,7 +389,7 @@ themselves stay the same.
 ### Structure: thin pages, testable data layer
 
 ```
-app/Home.py, app/pages/*.py      what to draw (thin; no SQL)
+app/Home.py, app/views/*.py      what to draw (thin; no SQL)
 src/zap/dashboard/data.py        every query, as plain functions returning DataFrames
 src/zap/dashboard/theme.py       palette + one `style()` for every chart
 src/zap/dashboard/ui.py          dataset picker, caching, "show as table"
@@ -1006,9 +1006,9 @@ average*. A 2× effect could still hide, because 67 orders per restaurant can't 
 
 ## M8: GenAI, with evaluation and a budget
 
-**Status of the paid parts: not run.** The OpenAI account had no credit, so enrichment, text-to-SQL
-accuracy and answer quality have no results yet. Everything below that shows a number was measured
-locally for free.
+**Status: run.** The paid evaluations ran on `gpt-5.6-luna`, whose price was checked on OpenAI's own
+pricing page first. The whole evaluation cost a few cents of a $2 budget. Search itself runs locally
+for free.
 
 ### An LLM client that can't spend by accident
 
@@ -1031,25 +1031,11 @@ templated by rating band. That changed two things. Enrichment labels each text o
 
 ### Search, measured stage by stage
 
-173 chunks from the data dictionary, these notes, the setup guide and the quality rules. 54 golden
+Search runs over the data dictionary, these notes, the setup guide and the quality rules. 54 golden
 questions: 18 name something exact, and 36 are deliberately paraphrased to avoid the document's own
 words. A chunk counts as relevant when it contains the question's evidence phrase, so nobody judges
-results after seeing them. All of this runs locally.
-
-| Stage | Recall@5 | MRR | Recall@5, exact | Recall@5, paraphrased |
-|---|---|---|---|---|
-| BM25 | 0.685 | 0.534 | 0.889 | 0.583 |
-| Dense | 0.815 | 0.639 | 0.944 | 0.750 |
-| Hybrid | 0.852 | 0.725 | 1.000 | 0.778 |
-| Hybrid + rerank | 0.889 | 0.703 | 0.944 | 0.861 |
-
-Hybrid ranks best and is the only stage to find every exact identifier, which matters for rule
-names. **The reranker didn't earn its place:** on top of a search that takes about 0.1 s it added
-2.2 to 4.0 seconds a question on CPU across runs on this laptop, depending on what else was running.
-It also lowered MRR and lost one exact identifier, so answers don't use it. Its higher recall is two
-questions, and two cautions apply to every row here: a gap of one or two questions on 54 isn't
-significant, and I wrote both the questions and the documents, which flatters every stage. These
-numbers also depend on the documents, so `zap ai rag-eval` has to be re-run whenever they change.
+results after seeing them. All of this runs locally. Answers use hybrid search without the reranker,
+and [EVALUATION.md](EVALUATION.md) has the scores behind that choice.
 
 ### The SQL guard
 
@@ -1061,6 +1047,11 @@ Passing my own attack list proved little, so I tried to think of what would real
 and found a hole: `SELECT c FROM marts.dim_customer c` returns whole rows, emails included, without
 naming a column. The lesson is that a blocklist can't list everything. The fix wasn't a longer
 list: generated SQL now reads a view that has no email columns at all.
+
+### What the paid runs showed
+
+See [EVALUATION.md](EVALUATION.md). The results live there on purpose: search reads these notes, so
+results written here would leak into the test that produced them.
 
 ### What went wrong (and what each one teaches)
 
@@ -1075,8 +1066,8 @@ list: generated SQL now reads a view that has no email columns at all.
 
 ## M9: The analytics copilot
 
-**Status of the paid part: not run.** The LLM router and the SQL and document tools need credit.
-Routing fell back to keywords, and forecast and graph questions worked end to end on real data.
+**Status: run.** The LLM router and all four tools were exercised on real data. If the model is
+unavailable, routing falls back to keywords, and forecast and graph questions still work.
 
 ### The flow
 
@@ -1103,11 +1094,12 @@ way to the user. A test feeds in an invented figure and confirms it's blocked.
 | Router | Accuracy on 31 questions | Graph | SQL vs documents |
 |---|---|---|---|
 | Keywords | 74.2% | 7 of 7 | most errors are here |
-| LLM | not run | | |
+| LLM | 96.8% | 7 of 7 | none |
 
-The keyword router is the baseline the LLM has to beat to justify its cost. The errors are left in:
-padding the keyword list to pass its own test would make the baseline meaningless. "How is GMV
-trending?" fails because `how is` looks like a question about definitions.
+The keyword router is the baseline the LLM had to beat to justify its cost, and it did: 30 of 31,
+for a fraction of a cent. The errors are left in: padding the keyword list to pass its own test
+would make the baseline meaningless. "How is GMV trending month by month?" fooled both. Keywords
+read `how is` as a question about definitions, and the LLM read `trending` as a forecast.
 
 ### What went wrong (and what each one teaches)
 
@@ -1177,11 +1169,24 @@ bullets isn't in METRICS.md.
    script doing the timing wasn't in the repo either, so a clone couldn't repeat it. It is part of
    `zap ai rag-eval` now.
 4. **Retrieval scores went stale without any code changing.** Search runs over these documents, and
-   they kept growing after the M8 measurement: 153 chunks became 173 and hybrid MRR went from 0.746
-   to 0.725. Re-measuring before release caught it, and hybrid was still the best stage.
+   they kept growing after the M8 measurement. Re-measuring before release caught it.
 5. **The data dictionary still said the password was dropped in staging.** It had been dropped at
    ingestion since M5, and nobody had regenerated the file. The view written for text-to-SQL was
    missing from it too. Generated files need regenerating, or a check that they are current.
+
+### Looking at the dashboard as a reader
+
+Every page passed its tests, and the home page still hid its main message. Daily orders have such a
+strong weekly cycle that the line filled in as a solid blue band, so the growth was hard to see. A
+7-day average over faint daily values fixed that. The pages also gained grouped navigation, cards
+and a chat for the copilot that shows what has been spent before anyone asks a question. Reading
+the code for this found a real bug too: picking the first date of a range crashed the Cities page,
+because the picker reruns the page before the second click. A screenshot found another: Streamlit
+builds its own flat menu from any folder called `pages`, and showed it until the real one loaded,
+so the page files moved to `views`.
+
+Styling comes from CSS written for each theme, not a `[theme]` section, since that section pins
+every viewer to one theme and is what made dark mode unreadable in M3.
 
 ### One slowdown stayed unexplained
 

@@ -389,10 +389,10 @@ def test_cli_prints_the_scores(
     assert result.exit_code == 0, result.output
     assert "best model" in result.output and "national MAPE" in result.output
 
-    page = AppTest.from_file(str(REPO_ROOT / "app/pages/5_Forecasts.py"), default_timeout=120).run()
+    page = AppTest.from_file(str(REPO_ROOT / "app/views/5_Forecasts.py"), default_timeout=120).run()
     get_settings.cache_clear()
     assert not page.exception
-    assert "Lowest error across all series" in page.caption[0].value
+    assert any("Lowest error across all series" in c.value for c in page.caption)
     assert {tile.label for tile in page.metric} >= {
         "Seasonal naive (baseline)",
         "ETS (Holt-Winters)",
@@ -417,7 +417,7 @@ def test_cli_needs_a_warehouse(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_page_names_every_event_the_detector_scores() -> None:
-    source = (REPO_ROOT / "app/pages/5_Forecasts.py").read_text(encoding="utf-8")
+    source = (REPO_ROOT / "app/views/5_Forecasts.py").read_text(encoding="utf-8")
     for name, _, _ in anomaly.EVENTS:
         assert f'"{name}":' in source
 

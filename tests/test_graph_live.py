@@ -100,7 +100,7 @@ def test_the_page_renders_from_the_published_tables(
     monkeypatch.setenv("WAREHOUSE_DIR", str(settings.warehouse_dir))
     get_settings.cache_clear()
     page = AppTest.from_file(
-        str(REPO_ROOT / "app/pages/6_Knowledge_Graph.py"), default_timeout=120
+        str(REPO_ROOT / "app/views/6_Knowledge_Graph.py"), default_timeout=120
     ).run()
     get_settings.cache_clear()
     assert not page.exception

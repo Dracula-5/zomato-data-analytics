@@ -16,7 +16,9 @@ from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
 
-OUT = Path(__file__).resolve().parents[1] / "docs" / "images"
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "docs" / "images"
+DARK = ROOT / "artifacts" / "screenshots_dark"  # to look at, not to publish
 PAGES = {
     "home": "",
     "cities": "Cities",
@@ -27,30 +29,38 @@ PAGES = {
     "knowledge_graph": "Knowledge_Graph",
     "ai_evaluation": "AI_Evaluation",
 }
-QUESTION = "Which brands share a kitchen?"
+QUESTION = "Which restaurant chains did the graph find?"
 MAX_HEIGHT = 2600
+IDLE = "!document.querySelector('[data-testid=\"stStatusWidget\"]')"
 
 
 def errors_on(page: Page) -> int:
     return page.locator('[data-testid="stException"]').count()
 
 
-def capture(page: Page, target: Path | None) -> int:
+def settle(page: Page) -> None:
+    """Wait for Streamlit to finish, however long a first query takes, then for the charts."""
+    page.wait_for_timeout(1500)
+    page.wait_for_function(IDLE, timeout=180000)
+    page.wait_for_timeout(2500)
+
+
+def capture(page: Page, target: Path) -> int:
     page.locator('[data-testid="stMainBlockContainer"]').wait_for(timeout=60000)
-    page.wait_for_timeout(6000)
+    settle(page)
     height = page.evaluate(
         "document.querySelector('[data-testid=\"stMainBlockContainer\"]').scrollHeight"
     )
     # Streamlit scrolls an inner container, so the window has to grow to fit everything.
     page.set_viewport_size({"width": 1400, "height": min(height + 80, MAX_HEIGHT)})
-    page.wait_for_timeout(1500)
-    if target is not None:
-        page.screenshot(path=str(target))
+    settle(page)
+    page.screenshot(path=str(target))
     return errors_on(page)
 
 
 def main(base: str) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
+    DARK.mkdir(parents=True, exist_ok=True)
     problems = 0
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(channel="chrome", headless=True)
@@ -60,20 +70,17 @@ def main(base: str) -> int:
                     viewport={"width": 1400, "height": 1000}, color_scheme=scheme
                 )
                 page.goto(f"{base}/{path}")
-                target = OUT / f"{name}.png" if scheme == "light" else None
+                target = (OUT if scheme == "light" else DARK) / f"{name}.png"
                 found = capture(page, target)
                 problems += found
                 print(f"{scheme:5} {name:16} errors: {found}")
                 page.close()
 
-        page = browser.new_page(viewport={"width": 1400, "height": 1000}, color_scheme="light")
+        page = browser.new_page(viewport={"width": 1400, "height": 1200}, color_scheme="light")
         page.goto(f"{base}/Copilot")
-        box = page.get_by_label("Ask a question")
-        box.wait_for(timeout=60000)
-        box.fill(QUESTION)
-        box.press("Enter")
-        page.wait_for_timeout(1500)
-        page.get_by_role("button", name="Ask").click()
+        example = page.get_by_role("button", name=QUESTION)
+        example.wait_for(timeout=60000)
+        example.click()
         page.get_by_text("numbers trace to tool output").wait_for(timeout=60000)
         page.wait_for_timeout(1500)
         problems += errors_on(page)

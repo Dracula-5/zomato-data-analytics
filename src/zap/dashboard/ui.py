@@ -9,9 +9,10 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from zap.config import get_settings
+from zap.config import REPO_ROOT, get_settings
 from zap.dashboard import data
-from zap.dashboard.theme import Mode
+from zap.dashboard.theme import Mode, page_css
+from zap.metrics.collect import Metric, collect
 
 DATASET_NOTE = {
     "full": "Full dataset (10M SYNTHETIC orders).",
@@ -24,16 +25,23 @@ def theme_mode() -> Mode:
     return "dark" if getattr(theme, "type", None) == "dark" else "light"
 
 
-def page_setup(title: str) -> Path | None:
+def page_setup(title: str, subtitle: str = "") -> Path | None:
     """Page config + sidebar dataset picker. Returns the warehouse file, or None if none built."""
     st.set_page_config(page_title=f"{title} | Zomato AI Data Platform", layout="wide")
+    st.markdown(page_css(theme_mode()), unsafe_allow_html=True)
     st.title(title)
+    if subtitle:
+        st.caption(subtitle)
     settings = get_settings()
     datasets = data.available_datasets(settings.warehouse_dir)
     if not datasets:
         st.warning("No warehouse found. Run `make local` (or `make demo`) first.")
         return None
-    chosen = st.sidebar.selectbox("Dataset", datasets, key="dataset")
+    # Each page has its own copy of this widget, so the choice is kept outside it.
+    saved = st.session_state.get("chosen_dataset")
+    index = datasets.index(saved) if saved in datasets else 0
+    chosen = st.sidebar.selectbox("Dataset", datasets, index=index, key="dataset")
+    st.session_state["chosen_dataset"] = chosen
     note = DATASET_NOTE.get(chosen, "Deterministic user-level SAMPLE of the synthetic orders.")
     st.sidebar.caption(note)
     return settings.duckdb_path(chosen)
@@ -53,3 +61,13 @@ def load(name: str, db: Path, *args: Any) -> Any:
 def table_view(frame: pd.DataFrame, label: str = "Show the data as a table") -> None:
     with st.expander(label):
         st.dataframe(frame, hide_index=True, width="stretch")
+
+
+def measured() -> list[Metric]:
+    """Everything in docs/METRICS.md, read from the files real runs left."""
+    settings = get_settings()
+    return collect(
+        settings.artifacts_dir,
+        REPO_ROOT / "eval" / "results",
+        settings.llm_replay_dir / "spend.jsonl",
+    )

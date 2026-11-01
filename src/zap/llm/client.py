@@ -27,8 +27,7 @@ from zap.config import Settings
 
 Schema = TypeVar("Schema", bound=BaseModel)
 
-# USD per 1M tokens. Listed by third-party price trackers in October 2026: OpenAI's own
-# pricing page couldn't be read when this was written, so check it before relying on these.
+# USD per 1M tokens (input, output), standard tier, from OpenAI's pricing page on 2026-10-31.
 PRICES: dict[str, tuple[float, float]] = {"gpt-5.6-luna": (0.20, 1.20)}
 CHARS_PER_TOKEN = 3  # deliberately low, so the worst-case estimate runs high
 LEDGER = "spend.jsonl"
@@ -84,7 +83,7 @@ class LlmClient:
                     continue
                 for line in path.read_text(encoding="utf-8").splitlines():
                     entry = json.loads(line)
-                    self._saved[entry["key"]] = entry
+                    self._saved[entry["prompt_hash"]] = entry
         return self._saved
 
     def spent_usd(self) -> float:
@@ -163,7 +162,7 @@ class LlmClient:
         text, input_tokens, output_tokens = self._call_api(system, user, schema, limit)
         cost = call_cost(model, input_tokens, output_tokens)
         entry = {
-            "key": key,
+            "prompt_hash": key,
             "model": model,
             "text": text,
             "input_tokens": input_tokens,

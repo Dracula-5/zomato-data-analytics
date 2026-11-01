@@ -61,6 +61,8 @@ them there before presenting.
 - The SQL guard refuses 92 attacks, and a read-only connection is the second layer
 - Trying to break it found a real leak, which led to a view with no email at all
 - Replay by default, with a hard budget cap
+- 88.9% text-to-SQL, and 96.8% routing against a 74.2% keyword baseline
+- A judge can pass a wrong answer, so citations are checked separately
 - Close with what would change on real data
 
 **Visual:** the Copilot page, showing the checks under an answer

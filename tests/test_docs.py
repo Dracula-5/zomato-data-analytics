@@ -3,6 +3,7 @@
 import re
 
 from helpers import REPO_ROOT
+from zap.rag.corpus import DOCUMENTS
 
 METRICS = REPO_ROOT / "docs" / "METRICS.md"
 BULLETS = REPO_ROOT / "RESUME_BULLETS.md"
@@ -22,6 +23,14 @@ def test_every_number_in_the_resume_bullets_is_in_the_metrics() -> None:
 def test_the_metrics_warn_about_the_data() -> None:
     text = METRICS.read_text(encoding="utf-8")
     assert "synthetic-looking" in text and "SYNTHETIC" in text and "not run" in text
+
+
+def test_evaluation_results_stay_out_of_what_search_reads() -> None:
+    # Results in a searched document would leak into the test that produced them, and every
+    # write-up would change the scores it reports.
+    assert not {"docs/EVALUATION.md", "docs/METRICS.md"} & set(DOCUMENTS)
+    for document in DOCUMENTS:
+        assert "MRR" not in (REPO_ROOT / document).read_text(encoding="utf-8"), document
 
 
 def test_there_are_at_least_five_decisions_recorded() -> None:

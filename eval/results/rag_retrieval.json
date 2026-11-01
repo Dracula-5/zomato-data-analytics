@@ -4,25 +4,25 @@
   "modes": {
     "dense": {
       "recall_at_5": 0.8148,
-      "mrr": 0.6386,
+      "mrr": 0.6476,
       "recall_at_5_exact": 0.9444,
       "recall_at_5_paraphrase": 0.75
     },
     "bm25": {
       "recall_at_5": 0.6852,
-      "mrr": 0.5342,
+      "mrr": 0.5229,
       "recall_at_5_exact": 0.8889,
       "recall_at_5_paraphrase": 0.5833
     },
     "hybrid": {
       "recall_at_5": 0.8519,
-      "mrr": 0.7247,
+      "mrr": 0.7367,
       "recall_at_5_exact": 1.0,
       "recall_at_5_paraphrase": 0.7778
     },
     "hybrid_rerank": {
       "recall_at_5": 0.8889,
-      "mrr": 0.703,
+      "mrr": 0.7011,
       "recall_at_5_exact": 0.9444,
       "recall_at_5_paraphrase": 0.8611
     }

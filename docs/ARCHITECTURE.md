@@ -21,6 +21,10 @@ flowchart LR
     MARTS --> REC[Recommender audit]
     FC --> DASH
     KG --> DASH
+    MARTS --> SIM[Simulated feed<br/>and alerts]
+    MARTS --> DIG[Weekly digest]
+    SIM --> DASH
+    DIG --> DASH
 
     DOCS[Docs, rules,<br/>data dictionary] --> RAG[Hybrid retrieval]
     MARTS --> SQL[Text-to-SQL guard]
@@ -52,7 +56,9 @@ Snowflake in the cloud. Only `macros/cross_db.sql` knows they differ.
 | Recommender audit | Signal audit and baselines on a temporal split | `src/zap/recsys/` |
 | GenAI | LLM client with a budget, retrieval over documents, guarded text-to-SQL | `src/zap/llm/`, `src/zap/rag/`, `src/zap/text2sql/`, `src/zap/enrich/` |
 | Agent | LangGraph flow with routing, approval and deterministic validation | `src/zap/agent/` |
-| Dashboard | Nine Streamlit pages over the marts and published results | `app/`, `src/zap/dashboard/` |
+| Live feed | A SIMULATED order stream, minute windows and alerts, on a SQLite log | `src/zap/stream/` |
+| Scheduled analysis | A weekly digest that tests changes against noise, with a checked summary | `src/zap/insights/` |
+| Dashboard | Twelve Streamlit pages over the marts, the feed and published results | `app/`, `src/zap/dashboard/` |
 | Infrastructure | Terraform for S3 and IAM, versioned SQL for Snowflake, GitHub Actions for CI | `infra/`, `.github/` |
 
 ## Data flow in detail
@@ -117,3 +123,4 @@ routing falls back to keywords, whose accuracy is measured, and other questions 
 3. [Guarding generated SQL by parsing it](adr/0003-guarding-generated-sql.md)
 4. [Building the graph on menus, not orders](adr/0004-graph-on-menus-not-orders.md)
 5. [Simple models, because the data can't reward complex ones](adr/0005-simple-models-over-complex.md)
+6. [A labelled simulation, on a SQLite log](adr/0006-a-labelled-simulation-on-a-sqlite-log.md)

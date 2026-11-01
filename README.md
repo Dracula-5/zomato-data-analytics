@@ -58,6 +58,8 @@ flowchart LR
 | Cloud | Terraform, S3, keyless IAM integration, masking policies, least-privilege roles |
 | Forecasting | ETS and LightGBM with walk-forward backtests, plus anomaly detection |
 | Graph | Neo4j and GDS: node similarity, Louvain and PageRank |
+| Streaming | A SIMULATED order feed with offsets, a watermark for late events and Poisson alerting |
+| Scheduled analysis | A weekly digest that tests each change against noise, on the Airflow schedule |
 | GenAI | Hybrid retrieval, Pydantic-validated output, text-to-SQL with a parsing guard, LangGraph |
 | Engineering | pytest, mypy strict, ruff, pre-commit, gitleaks, GitHub Actions |
 
@@ -79,6 +81,8 @@ make local             # a 5% sample by user, free
 make local-full        # all of the data, free
 make forecast          # backtests and anomaly scores
 make recsys            # the recommender audit
+make stream            # the SIMULATED live feed, for the Live Ops page
+make digest            # the weekly analysis
 make metrics           # regenerate docs/METRICS.md
 ```
 
@@ -93,10 +97,19 @@ Everything is built, tested and measured. The paid evaluations cost about $0.10 
 keyword baseline. [docs/EVALUATION.md](docs/EVALUATION.md) goes through the misses and what these
 numbers can't tell you.
 
+No real-time order feed is publicly available, so the live feed replays past orders and says so on
+every page. On days held out from its design it found 14 of 14 total city outages, at a median of 16
+simulated minutes, with 1 false alarm in 14 days. It misses a 30% loss. See
+[docs/LIVE_FEED.md](docs/LIVE_FEED.md).
+
 The dashboard's copilot replays saved answers by default. `LLM_MODE=live make app` lets it answer new
 questions, which makes small paid calls, and it shows the spend and stops at `LLM_BUDGET_USD`.
 
 ## Screenshots
+
+| Overview | Live Ops |
+|---|---|
+| ![Overview](docs/images/home.png) | ![Live Ops](docs/images/live_ops.png) |
 
 | Forecasts | Copilot |
 |---|---|
@@ -112,6 +125,7 @@ questions, which makes small paid calls, and it shows the spend and stops at `LL
 |---|---|
 | [METRICS.md](docs/METRICS.md) | Every measured result, with its source file |
 | [EVALUATION.md](docs/EVALUATION.md) | The AI scores, the misses, and what they can't tell you |
+| [LIVE_FEED.md](docs/LIVE_FEED.md) | The SIMULATED stream, its alerts, and how well they work |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the system fits together, and its security controls |
 | [BUSINESS_CASE.md](docs/BUSINESS_CASE.md) | What this is worth, and what the data can't support |
 | [Decision records](docs/adr/) | The five choices that shaped the project |

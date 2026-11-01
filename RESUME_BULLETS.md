@@ -15,6 +15,12 @@ doesn't. If a metric changes, change the bullet. Pick the 3 or 4 that fit each a
 - Made daily Airflow loads idempotent, proving that re-running a day left 21/21 tables identical
   and that day-by-day runs matched a full rebuild.
 
+**Streaming**
+
+- Built a SIMULATED live order feed with an event log, consumer offsets, a watermark for late events
+  and Poisson alerting, finding 100.0% of total city outages at a median of 16.0 minutes with 0.07
+  false alarms a day on held-out days, and showing that a 30% loss stays undetectable.
+
 **Cloud**
 
 - Deployed S3 and Snowflake with Terraform and a keyless IAM integration, loading 35,098,217 rows
@@ -70,6 +76,7 @@ looked right and weren't.
 - A text-to-SQL score above 88.9%. Two of the four misses were correct answers, which is worth
   saying out loud, but 88.9% is the number.
 - That 100% sentiment agreement means anything for real reviews. The texts are templates.
+- That this ran on live data. The feed is a replay of past orders, and the outages are SYNTHETIC.
 - That the shared-kitchen groups are proven. The data shows one menu under several names, and
   doesn't show who owns them.
 - Any revenue or savings figure. Nothing measured supports one.

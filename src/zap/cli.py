@@ -24,6 +24,7 @@ from zap.kg.commands import graph_app
 from zap.pipeline import PipelineError, run_local
 from zap.quality.gx_suite import GxReport, validate_lake, write_gx_report
 from zap.quality.report import build_report
+from zap.stream_commands import stream_app
 from zap.warehouse.duckdb_loader import load_raw, write_load_log
 from zap.warehouse.fingerprint import diff as fingerprint_diff
 from zap.warehouse.fingerprint import fingerprint
@@ -32,6 +33,7 @@ app = typer.Typer(help="Zomato AI Data Platform CLI.", no_args_is_help=True)
 app.add_typer(cloud_app, name="cloud")
 app.add_typer(graph_app, name="graph")
 app.add_typer(ai_app, name="ai")
+app.add_typer(stream_app, name="stream")
 
 SourceOpt = Annotated[Path | None, typer.Option(help="CSV folder (default: DATA_DIR).")]
 TablesOpt = Annotated[
@@ -307,6 +309,29 @@ def recsys_cmd(dataset: DatasetOpt = "full") -> None:
                 f"  {model:16} Recall@10 {scores['recall_at_10']:.5f}  "
                 f"NDCG@10 {scores['ndcg_at_10']:.5f}  {scores['times_random']:.2f}x random"
             )
+    typer.echo(f"Report: {path}")
+
+
+@app.command("digest")
+def digest_cmd(
+    dataset: Annotated[str, typer.Option(help="Warehouse to analyse.")] = "full",
+    brief: Annotated[
+        bool, typer.Option(help="Also write a checked summary. Paid when LLM_MODE=live.")
+    ] = True,
+) -> None:
+    """Compare the latest week with the one before, and test each change against noise."""
+    from zap.insights import digest as weekly
+    from zap.llm.client import LlmClient
+
+    settings = get_settings()
+    report = weekly.analyse(settings.duckdb_path(dataset))
+    report["dataset"] = dataset
+    report["ran_at"] = datetime.now(UTC).isoformat(timespec="seconds")
+    report["brief"] = weekly.write_brief(LlmClient(settings), report["findings"]) if brief else None
+    path = weekly.save(report, settings.artifacts_dir / "digest")
+    for line in report["findings"]:
+        typer.echo(f"  {line}")
+    typer.echo(f"Brief: {report['brief'] or 'none'}")
     typer.echo(f"Report: {path}")
 
 

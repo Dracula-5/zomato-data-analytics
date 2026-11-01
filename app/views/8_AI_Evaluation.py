@@ -11,7 +11,7 @@ from zap.dashboard.theme import series_color, style
 from zap.dashboard.ui import measured, page_setup, theme_mode
 from zap.metrics.collect import NOT_RUN
 
-GROUPS = ("AI evaluation", "LLM cost", "Recommender audit")
+GROUPS = ("AI evaluation", "Live feed", "LLM cost", "Recommender audit")
 HEADLINES = (
     ("Text-to-SQL accuracy", "Text-to-SQL execution accuracy"),
     ("RAG faithfulness", "RAG faithfulness"),

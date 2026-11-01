@@ -268,6 +268,28 @@ def graph_top_restaurants(db: Path) -> pd.DataFrame:
     return query(db, "select * from kg.top_restaurants order by pagerank desc")
 
 
+def has_review_labels(db: Path) -> bool:
+    found = query(
+        db,
+        """select count(*) as n from information_schema.tables
+           where table_schema = 'ai' and table_name = 'topic_sentiment'""",
+    )
+    return bool(found["n"].iloc[0])
+
+
+def topic_sentiment(db: Path) -> pd.DataFrame:
+    return query(db, "select topic, sentiment, reviews from ai.topic_sentiment order by topic")
+
+
+def review_issues(db: Path, n: int = 12) -> pd.DataFrame:
+    return query(
+        db,
+        """select key_issue, topic, sum(reviews) as reviews from ai.review_labels
+           where key_issue is not null group by all order by reviews desc, key_issue limit ?""",
+        [n],
+    )
+
+
 def latest_drift(log_path: Path) -> pd.DataFrame:
     """Most recent drift check per table, from the JSONL audit log."""
     if not log_path.exists():

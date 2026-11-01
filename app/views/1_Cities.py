@@ -3,7 +3,7 @@
 import plotly.graph_objects as go
 import streamlit as st
 
-from zap.dashboard.charts import trend
+from zap.dashboard.charts import city_map, trend
 from zap.dashboard.theme import series_color, style
 from zap.dashboard.ui import load, page_setup, table_view, theme_mode
 
@@ -48,7 +48,9 @@ if db is not None:
     )
     fig.update_layout(title="Top 15 cities by GMV", xaxis_title="GMV (₹)")
     fig.update_xaxes(range=[0, float(top["gmv"].max()) * 1.12])  # room for the labels
-    st.plotly_chart(style(fig, mode, height=480), width="stretch")
+    left, right = st.columns([1.25, 1])
+    left.plotly_chart(style(fig, mode, height=480), width="stretch")
+    right.plotly_chart(city_map(cities, "gmv", "GMV on the map", mode, height=480), width="stretch")
     table_view(cities, "All cities as a table")
 
     st.subheader("One city over time")

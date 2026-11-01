@@ -372,4 +372,5 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 - [x] M9 Agentic Copilot + eval
 - [x] M10 Recsys audit
 - [x] M11 Metrics, docs, deliverables
+- [x] M12 SIMULATED live feed, weekly digest and dashboard redesign (added after M11; see ADR 6)
 - [ ] B7 image classifier: recommended cut (D3)

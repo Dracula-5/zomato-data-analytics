@@ -846,6 +846,50 @@ def engineering_metrics(src: Sources, junit: Path) -> list[Metric]:
     ]
 
 
+def stream_metrics(src: Sources) -> list[Metric]:
+    group = "Live feed"
+    report = src.art("stream_eval_holdout.json")
+    source = "artifacts/stream_eval_holdout.json"
+    data = "SIMULATED replay of held-out days, SYNTHETIC outages"
+    rows = [
+        Metric(group, "Events replayed", show(dig(report, "events"), count), data, source),
+        Metric(
+            group,
+            "Events processed a second",
+            show(dig(report, "events_per_second"), lambda v: f"{float(v):,.0f}"),
+            data,
+            source,
+        ),
+        Metric(
+            group,
+            "False alarms a simulated day",
+            show(dig(report, "false_alarms_per_day")),
+            data,
+            source,
+        ),
+    ]
+    for severity in ("100%", "70%", "50%", "30%"):
+        rows.append(
+            Metric(
+                group,
+                f"Outages found, {severity} of a city's orders lost",
+                show(dig(report, "by_severity", severity, "recall"), share),
+                data,
+                source,
+            )
+        )
+    rows.append(
+        Metric(
+            group,
+            "Median minutes to notice a 100% outage",
+            show(dig(report, "by_severity", "100%", "median_delay_minutes")),
+            data,
+            source,
+        )
+    )
+    return rows
+
+
 def collect(artifacts: Path, results: Path, ledger: Path) -> list[Metric]:
     src = Sources(artifacts, results)
     return [
@@ -856,6 +900,7 @@ def collect(artifacts: Path, results: Path, ledger: Path) -> list[Metric]:
         *airflow_metrics(src),
         *cloud_metrics(src),
         *forecast_metrics(src),
+        *stream_metrics(src),
         *graph_metrics(src),
         *recsys_metrics(src),
         *ai_metrics(src),

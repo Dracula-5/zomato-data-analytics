@@ -7,7 +7,7 @@ The source data is **synthetic-looking**: it behaves like generated data, so res
 this dataset rather than real food delivery. Anything marked SYNTHETIC used events planted on
 purpose to test a detector. The 5% sample is by user, and keeps each user's whole history.
 
-**90 of 90 metrics have been measured.**
+**98 of 98 metrics have been measured.**
 
 ## Pipeline size and speed
 
@@ -93,6 +93,19 @@ purpose to test a detector. The 5% sample is by user, and keeps each user's whol
 | Anomaly precision, same-weekday detector | **90.5%** | Full data, with SYNTHETIC planted events | `artifacts/forecast_backtest.json` | 2026-10-31 |
 | False alarms per 1,000 normal days | **2.08** | Full data, with SYNTHETIC planted events | `artifacts/forecast_backtest.json` | 2026-10-31 |
 | Anomaly recall, plain z-score | **7.8%** | Full data, with SYNTHETIC planted events | `artifacts/forecast_backtest.json` | 2026-10-31 |
+
+## Live feed
+
+| Metric | Value | Data | Source | Ran |
+|---|---|---|---|---|
+| Events replayed | **218,691** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
+| Events processed a second | **886** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
+| False alarms a simulated day | **0.07** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
+| Outages found, 100% of a city's orders lost | **100.0%** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
+| Outages found, 70% of a city's orders lost | **78.6%** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
+| Outages found, 50% of a city's orders lost | **50.0%** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
+| Outages found, 30% of a city's orders lost | **0.0%** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
+| Median minutes to notice a 100% outage | **16.0** | SIMULATED replay of held-out days, SYNTHETIC outages | `artifacts/stream_eval_holdout.json` |  |
 
 ## Knowledge graph
 

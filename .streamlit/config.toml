@@ -13,7 +13,33 @@ gatherUsageStats = false
 # Only [theme.light] and [theme.dark]: an option directly under [theme] fixes the app to one theme
 # and ignores the viewer's setting, while the charts still follow it (see dashboard/ui.py).
 [theme.light]
-primaryColor = "#2a78d6"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+primaryColor = "#c2410c"
+backgroundColor = "#f7f5f2"
+secondaryBackgroundColor = "#efeae3"
+textColor = "#1c1917"
+borderColor = "#e4ddd3"
+baseRadius = "0.6rem"
+
+[theme.light.sidebar]
+backgroundColor = "#1c1917"
+secondaryBackgroundColor = "#2e2925"
+textColor = "#e7e0d8"
+borderColor = "#3a342f"
+primaryColor = "#fb923c"
 
 [theme.dark]
-primaryColor = "#3987e5"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+primaryColor = "#fb923c"
+backgroundColor = "#12100e"
+secondaryBackgroundColor = "#221e1b"
+textColor = "#f5f1eb"
+borderColor = "#2e2925"
+baseRadius = "0.6rem"
+
+[theme.dark.sidebar]
+backgroundColor = "#0c0a09"
+secondaryBackgroundColor = "#221e1b"
+textColor = "#e7e0d8"
+borderColor = "#2e2925"
+primaryColor = "#fb923c"

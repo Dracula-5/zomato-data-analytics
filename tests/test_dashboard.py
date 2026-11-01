@@ -109,17 +109,17 @@ def test_theme() -> None:
 
 
 def test_page_css_comes_from_the_viewers_theme() -> None:
-    assert INK["light"]["surface"] in page_css("light")
-    assert INK["dark"]["surface"] in page_css("dark")
-    assert INK["dark"]["surface"] not in page_css("light")
+    assert INK["light"]["grid"] in page_css("light")
+    assert INK["dark"]["grid"] in page_css("dark")
+    assert INK["dark"]["grid"] not in page_css("light")
 
 
-def test_trend_draws_a_weekly_average_over_the_daily_values() -> None:
+def test_trend_draws_a_weekly_average_inside_the_range_of_its_week() -> None:
     days = pd.date_range("2026-01-01", periods=10)
     frame = pd.DataFrame({"order_date": days[::-1], "orders": list(range(10))[::-1]})
-    daily, average = trend(frame, "orders", "Orders", "light").data
-    assert list(daily.y) == list(range(10))  # sorted by date, whatever order they arrive in
+    high, low, average = trend(frame, "orders", "Orders", "light").data
     assert pd.isna(average.y[5]) and average.y[6] == 3  # nothing until a full week exists
+    assert high.y[6] == 6 and low.y[6] == 0  # sorted by date, whatever order they arrive in
 
 
 def test_pages_can_follow_the_viewers_theme() -> None:

@@ -11,8 +11,11 @@ import streamlit as st
 
 from zap.config import REPO_ROOT, get_settings
 from zap.dashboard import data
+from zap.dashboard.components import feed_badge
 from zap.dashboard.theme import Mode, page_css
 from zap.metrics.collect import Metric, collect
+from zap.stream.read import feed_state
+from zap.stream.store import stream_path
 
 DATASET_NOTE = {
     "full": "Full dataset (10M SYNTHETIC orders).",
@@ -25,10 +28,18 @@ def theme_mode() -> Mode:
     return "dark" if getattr(theme, "type", None) == "dark" else "light"
 
 
+def _show_feed_state() -> None:
+    state = feed_state(stream_path(get_settings().warehouse_dir))
+    if state.running:
+        feed_badge(True, "Live feed running", "SIMULATED orders")
+    else:
+        feed_badge(False, "Live feed stopped", "Start it on Live Ops")
+
+
 def page_setup(title: str, subtitle: str = "") -> Path | None:
     """Page config + sidebar dataset picker. Returns the warehouse file, or None if none built."""
     st.set_page_config(page_title=f"{title} | Zomato AI Data Platform", layout="wide")
-    st.markdown(page_css(theme_mode()), unsafe_allow_html=True)
+    st.html(page_css(theme_mode()))
     st.title(title)
     if subtitle:
         st.caption(subtitle)
@@ -44,6 +55,7 @@ def page_setup(title: str, subtitle: str = "") -> Path | None:
     st.session_state["chosen_dataset"] = chosen
     note = DATASET_NOTE.get(chosen, "Deterministic user-level SAMPLE of the synthetic orders.")
     st.sidebar.caption(note)
+    _show_feed_state()
     return settings.duckdb_path(chosen)
 
 

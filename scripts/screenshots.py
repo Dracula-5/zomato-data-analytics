@@ -21,6 +21,9 @@ OUT = ROOT / "docs" / "images"
 DARK = ROOT / "artifacts" / "screenshots_dark"  # to look at, not to publish
 PAGES = {
     "home": "",
+    "live_ops": "Live_Ops",
+    "insights": "Insights",
+    "customer_voice": "Customer_Voice",
     "cities": "Cities",
     "restaurants": "Restaurants",
     "delivery_sla": "Delivery_SLA",
@@ -32,25 +35,32 @@ PAGES = {
 QUESTION = "Which restaurant chains did the graph find?"
 MAX_HEIGHT = 2600
 IDLE = "!document.querySelector('[data-testid=\"stStatusWidget\"]')"
+HEIGHT = "document.querySelector('[data-testid=\"stMainBlockContainer\"]').scrollHeight"
+STEADY_CHECKS = 6
+STEADY_TRIES = 360
 
 
 def errors_on(page: Page) -> int:
     return page.locator('[data-testid="stException"]').count()
 
 
-def settle(page: Page) -> None:
-    """Wait for Streamlit to finish, however long a first query takes, then for the charts."""
-    page.wait_for_timeout(1500)
-    page.wait_for_function(IDLE, timeout=180000)
-    page.wait_for_timeout(2500)
+def settle(page: Page) -> int:
+    """Wait until the page has stopped growing and Streamlit is idle. Returns its height."""
+    page.locator("h1").first.wait_for(timeout=180000)
+    last, steady = -1, 0
+    for _ in range(STEADY_TRIES):
+        height = page.evaluate(HEIGHT)
+        steady = steady + 1 if height == last and page.evaluate(IDLE) else 0
+        last = height
+        if steady == STEADY_CHECKS:
+            break
+        page.wait_for_timeout(500)
+    page.wait_for_timeout(1500)  # charts draw after the page settles
+    return int(last)
 
 
 def capture(page: Page, target: Path) -> int:
-    page.locator('[data-testid="stMainBlockContainer"]').wait_for(timeout=60000)
-    settle(page)
-    height = page.evaluate(
-        "document.querySelector('[data-testid=\"stMainBlockContainer\"]').scrollHeight"
-    )
+    height = settle(page)
     # Streamlit scrolls an inner container, so the window has to grow to fit everything.
     page.set_viewport_size({"width": 1400, "height": min(height + 80, MAX_HEIGHT)})
     settle(page)

@@ -13,6 +13,37 @@ Status: **APPROVED** on 2026-10-29. All decisions D1–D8 accepted as recommende
 | D7 | OpenAI confirmed |
 | D8 | You create the GitHub repo; I never push without asking |
 
+## Audit snapshot (current repo state)
+
+This workspace already contains a mostly complete implementation of the Zomato AI Data Platform. The repository was audited against the milestone brief, and the current state is:
+
+- Built and validated locally: `uv` project, `src/` package, `Makefile`, `.env.example`, lint/type/test tooling, synthetic fixture generation, ingestion + lake, dbt warehouse setup, dashboard scaffolding, quality checks, demo pipeline, and the full CI/test suite.
+- Broken / blocked in this environment: no code-level failures remained after running `make check`; the remaining gaps are environment-dependent features that were not executed because they require Docker/cloud/console credentials or optional paid services.
+- Missing / not run here: live Snowflake/AWS execution, Terraform deployment, Neo4j/GDS run, full Airflow scheduler replay, and any paid LLM/live evaluation calls unless explicitly enabled.
+- Status: good for portfolio use and passthrough validation, not for cloud execution without credentials.
+
+### Checklist
+
+- [x] Milestone 0: project audit + decision record
+- [x] Milestone 1: foundation setup (`uv`, CLI, Makefile, CI, tooling)
+- [x] Milestone 2: ingestion + lake + schema contracts + drift detection
+- [x] Milestone 3: warehouse + dbt + incremental models + marts
+- [x] Milestone 4: governance + quality + masking + access checks
+- [x] Milestone 5: orchestration + replay/idempotence checks
+- [x] Milestone 6: cloud design docs + Terraform scaffolding (execution not run without credentials)
+- [x] Milestone 7: forecasting + anomaly detection implementation
+- [x] Milestone 8: knowledge graph + GDS implementation (not run locally here)
+- [x] Milestone 9: recommender audit + baselines
+- [x] Milestone 10: GenAI evaluation and guarded SQL implementation
+- [x] Milestone 11: LangGraph agent and deterministic validation flow
+- [x] Milestone 12: simulated streaming + alerting implementation
+- [x] Milestone 13: Streamlit dashboard + replay-first LLM mode
+- [x] Milestone 14: package docs and project narrative
+- [x] Final validation: `make check` passes
+- [x] Final validation: `make demo` passes with the synthetic fixture
+- [ ] Optional cloud execution (Snowflake/AWS/OpenAI) requires credentials and is not run here
+- [ ] Optional Docker-dependent graph/Airflow runs are available but not executed in this local session
+
 ## 1. Goal and ground rules
 
 Build a portfolio project that rebuilds the reference pipeline as my own work

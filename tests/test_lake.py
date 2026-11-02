@@ -106,6 +106,23 @@ def test_rerun_is_idempotent(
     assert not [p for p in (out / "raw").iterdir() if p.name.startswith(".tmp")]
 
 
+def test_directory_swap_replaces_existing_lake_table(tmp_path: Path) -> None:
+    final = tmp_path / "lake" / "raw" / "food"
+    final.mkdir(parents=True)
+    (final / "old.txt").write_text("old", encoding="utf-8")
+
+    tmp = tmp_path / "lake" / "raw" / ".tmp_food"
+    tmp.mkdir(parents=True)
+    (tmp / "new.txt").write_text("new", encoding="utf-8")
+
+    lake._swap_in(tmp, final)
+
+    assert not tmp.exists()
+    assert final.is_dir()
+    assert (final / "new.txt").read_text(encoding="utf-8") == "new"
+    assert not (final / "old.txt").exists()
+
+
 def test_sample_keeps_whole_users_and_their_children(
     contracts: dict[str, Contract], fixture_data: tuple[Path, FixtureResult], tmp_path: Path
 ) -> None:

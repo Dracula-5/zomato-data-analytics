@@ -178,20 +178,60 @@ def _write_table(con: duckdb.DuckDBPyConnection, contract: Contract, query: str,
         con.execute(f"COPY ({query}) TO {target} (FORMAT parquet, COMPRESSION zstd)")
 
 
+def _replace_path(src: Path, dest: Path) -> None:
+    """Atomically swap in a fresh directory, even when the destination already exists.
+
+    Windows refuses renaming a directory over an existing target, so we move the old
+    destination aside first and clean it up after the replacement.
+    """
+    if src == dest:
+        return
+    backup = dest.parent / f".{dest.name}.backup-{uuid.uuid4().hex[:8]}"
+    # If a previous run left a stale backup, remove it before reusing the name.
+    if backup.exists():
+        if backup.is_dir() and not backup.is_symlink():
+            shutil.rmtree(backup)
+        else:
+            backup.unlink()
+    for _ in range(5):
+        try:
+            if dest.exists():
+                dest.rename(backup)
+            src.rename(dest)
+            break
+        except OSError:
+            if backup.exists():
+                if backup.is_dir() and not backup.is_symlink():
+                    shutil.rmtree(backup, ignore_errors=True)
+                else:
+                    backup.unlink(missing_ok=True)
+            if dest.exists():
+                if dest.is_dir() and not dest.is_symlink():
+                    shutil.rmtree(dest, ignore_errors=True)
+                else:
+                    dest.unlink(missing_ok=True)
+            if _ == 4:
+                raise
+            time.sleep(0.1 * (_ + 1))
+    if backup.exists():
+        if backup.is_dir() and not backup.is_symlink():
+            shutil.rmtree(backup, ignore_errors=True)
+        else:
+            backup.unlink(missing_ok=True)
+
+
 def _swap_in(tmp: Path, final: Path) -> None:
-    if final.exists():
-        shutil.rmtree(final)
-    tmp.rename(final)
+    _replace_path(tmp, final)
 
 
 def _swap_in_partition(tmp: Path, final_table: Path, folder: str) -> None:
     """Replace one day's partition folder; a day with no rows leaves no folder behind."""
     target = final_table / folder
-    if target.exists():
-        shutil.rmtree(target)
     if (tmp / folder).exists():
         final_table.mkdir(parents=True, exist_ok=True)
-        (tmp / folder).rename(target)
+        _replace_path(tmp / folder, target)
+    elif target.exists():
+        shutil.rmtree(target)
 
 
 def ingest(

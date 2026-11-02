@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 NOT_RUN = "not run"
-FULL = "Full data (synthetic-looking source)"
+FULL = "Full data (synthetic orders/reviews; scraped-looking dimensions)"
 SAMPLE = "5% user sample"
 PLANTED = "Full data, with SYNTHETIC planted events"
 SHUFFLED = "Full data, shuffled as a control"
@@ -108,6 +108,7 @@ def pipeline_metrics(src: Sources) -> list[Metric]:
     when = stamp(run, "started_at")
     source = "artifacts/pipeline/full/latest.json"
     sample = src.art("pipeline/sample_5pct/latest.json")
+    fixture = src.art("pipeline/fixture/latest.json")
     fresh = src.art("fresh_clone.json")
     demo = dig(fresh, "demo_seconds") if dig(fresh, "exit_code") == 0 else None
     return [
@@ -126,6 +127,14 @@ def pipeline_metrics(src: Sources) -> list[Metric]:
             "SYNTHETIC fixture",
             "artifacts/fresh_clone.json",
             stamp(fresh),
+        ),
+        Metric(
+            group,
+            "End-to-end `make demo`",
+            show(dig(fixture, "seconds"), seconds),
+            "SYNTHETIC fixture",
+            "artifacts/pipeline/fixture/latest.json",
+            stamp(fixture, "started_at"),
         ),
         Metric(
             group,

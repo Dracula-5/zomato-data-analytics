@@ -22,6 +22,19 @@ This workspace already contains a mostly complete implementation of the Zomato A
 - Missing / not run here: live Snowflake/AWS execution, Terraform deployment, Neo4j/GDS run, full Airflow scheduler replay, and any paid LLM/live evaluation calls unless explicitly enabled.
 - Status: good for portfolio use and passthrough validation, not for cloud execution without credentials.
 
+### Validation refresh (2026-11-02)
+
+- `make check`: passed (602 passed, 6 skipped, 92.47% line/branch coverage).
+- `make demo`: passed on the SYNTHETIC fixture; 92 dbt nodes completed with no errors.
+- `make local-full` and `make local`: passed on full source data and a 5% user sample.
+- `make forecast`, `make recsys`, `make stream-eval`, and `make bench`: completed locally.
+- Terraform formatting/validation passed; the Streamlit health endpoint returned HTTP 200 and
+  the Overview and Live Ops pages rendered.
+- Docker-dependent graph/Airflow execution: not run; Docker Desktop's daemon was unavailable.
+- Cloud and live-LLM execution: not run; no cloud credentials or OpenAI key are configured.
+- Regenerated `docs/METRICS.md` from artifacts present in this checkout; missing historical
+  artifacts now display as "not run" rather than carrying forward unsupported claims.
+
 ### Checklist
 
 - [x] Milestone 0: project audit + decision record
@@ -404,4 +417,4 @@ You put them in `.env` or `~/.aws/credentials` yourself. Don't paste secrets int
 - [x] M10 Recsys audit
 - [x] M11 Metrics, docs, deliverables
 - [x] M12 SIMULATED live feed, weekly digest and dashboard redesign (added after M11; see ADR 6)
-- [ ] B7 image classifier: recommended cut (D3)
+- [x] B7 image classifier: intentionally cut (D3)

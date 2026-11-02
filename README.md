@@ -3,7 +3,8 @@
 A food-delivery data platform that takes raw files through to dashboards, forecasts, a knowledge
 graph and an AI copilot, and is built to say what its data can't support.
 
-It runs for free on a laptop with DuckDB, and the same project runs on S3 and Snowflake.
+It runs for free on a laptop with DuckDB. Optional S3 and Snowflake deployment paths are included
+but require cloud accounts and credentials.
 
 > **About the data:** the orders and reviews are synthetic, while the restaurant and menu data looks
 > scraped from a real delivery site. Results describe this dataset, not real food delivery, and
@@ -19,16 +20,12 @@ The most useful results came from checking things that looked true.
 
 | Looked like | Turned out to be | How it was checked |
 |---|---|---|
-| All 88 dbt tests pass, so the numbers are right | Snowflake rounded some rates twice | Comparing every table across the two engines |
-| 9,791 linked dish pairs | None: each restaurant sells a small pool of dishes | Testing within each restaurant |
-| 4,595 cancel-heavy restaurants | None, of 148,103 tested | Correcting for testing thousands at once |
-| The recommender beats random 15 times over | Popularity, not taste | Running it on shuffled orders |
-| LightGBM would beat a simple model | ETS already sits on the noise floor | Estimating the best possible error first |
-| 100% sentiment accuracy | 294 templated sentences, so it says little | Reading what the model was given |
-| A judge that clears an answer means it's right | It can pass a wrong answer built on the wrong passages | Checking the citations separately |
-
-What held up: chains and what look like shared-kitchen brands, found from menus alone with no names
-given to the algorithm.
+| Passing dbt tests means the source is clean | Quality rules still flagged records and quarantined malformed rows | dbt tests plus a separate rule catalogue |
+| Matrix factorization's lift over random proves taste | A shuffled-order control also gets above-random recall, so lift alone is not evidence of taste | Temporal split with popularity, shuffled and planted-taste controls |
+| LightGBM is the best forecaster | ETS scores better and is at the estimated noise floor | Walk-forward validation against a seasonal-naive baseline |
+| A good anomaly recall means outages are easy to detect | The detector misses most of the smaller planted outage case | Held-out SIMULATED replay, split by outage size |
+| Faithfulness means an answer is true | It only measures support from retrieved passages | Golden set plus citation checks; inspect misses |
+| Incremental models always make the whole build faster | Performance is measured separately for fact models and the whole project | Repeated DuckDB benchmark with result reconciliation |
 
 Every figure is in **[docs/METRICS.md](docs/METRICS.md)**, which `make metrics` regenerates from the
 files real runs left behind. Anything no run has produced says "not run".
@@ -92,18 +89,20 @@ so tests and CI can't spend anything.
 
 ## Status
 
-Everything is built, tested and measured. The paid evaluations cost about $0.10 of a $2 budget:
-88.9% text-to-SQL accuracy, 86.0% answer faithfulness, and 96.8% routing accuracy against a 74.2%
-keyword baseline. [docs/EVALUATION.md](docs/EVALUATION.md) goes through the misses and what these
-numbers can't tell you.
+The local path has been run on the full source data and the 5% user sample. `make check` and
+`make demo` pass; measured results and their artifact sources are in
+[docs/METRICS.md](docs/METRICS.md). The source orders and reviews are synthetic, so the figures
+describe this dataset, not real delivery operations.
 
-No real-time order feed is publicly available, so the live feed replays past orders and says so on
-every page. On days held out from its design it found 14 of 14 total city outages, at a median of 16
-simulated minutes, with 1 false alarm in 14 days. It misses a 30% loss. See
+The implementation includes cloud deployment, Airflow and Neo4j/GDS paths, but those services
+were **not run in this validation**: cloud credentials are not configured and the Docker daemon is
+unavailable. Live LLM calls were not made; the dashboard defaults to saved-answer replay. The
+stored evaluation results and their limitations are documented in
+[docs/EVALUATION.md](docs/EVALUATION.md).
+
+No real-time order feed is publicly available, so the Live Ops page replays past orders and labels
+the feed SIMULATED. Its held-out results, including the smaller outages it misses, are in
 [docs/LIVE_FEED.md](docs/LIVE_FEED.md).
-
-The dashboard's copilot replays saved answers by default. `LLM_MODE=live make app` lets it answer new
-questions, which makes small paid calls, and it shows the spend and stops at `LLM_BUDGET_USD`.
 
 ## Screenshots
 

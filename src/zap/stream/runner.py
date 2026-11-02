@@ -6,7 +6,7 @@ import random
 import statistics
 import time
 from collections.abc import Callable
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -125,6 +125,7 @@ def evaluate(db: Path, days: int = 14, skip_days: int = 0) -> dict[str, Any]:
 
     clean, events, seconds = replay_fast(orders, rates, watch, first, last, [])
     report: dict[str, Any] = {
+        "ran_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "replayed_days": days,
         "first_day": str(first),
         "last_day": str(last),

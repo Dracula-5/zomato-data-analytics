@@ -22,7 +22,8 @@ def test_every_number_in_the_resume_bullets_is_in_the_metrics() -> None:
 
 def test_the_metrics_warn_about_the_data() -> None:
     text = METRICS.read_text(encoding="utf-8")
-    assert "synthetic-looking" in text and "SYNTHETIC" in text and "not run" in text
+    assert "orders and reviews are synthetic" in text
+    assert "SYNTHETIC" in text and "not run" in text
 
 
 def test_evaluation_results_stay_out_of_what_search_reads() -> None:

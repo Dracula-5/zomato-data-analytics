@@ -287,6 +287,7 @@ def test_a_replay_can_be_measured_on_the_warehouse(pipeline: Pipeline) -> None:
     report = evaluate(db, days=3)
     assert report["events"] == len(orders)
     assert set(report["by_severity"]) == {"30%", "50%", "70%", "100%"}
+    assert report["ran_at"].endswith("+00:00")
 
 
 def test_the_stop_command(pipeline: Pipeline, monkeypatch: pytest.MonkeyPatch) -> None:

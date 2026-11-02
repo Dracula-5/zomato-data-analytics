@@ -58,6 +58,17 @@ def test_a_failed_fresh_clone_run_reports_no_time(tmp_path: Path) -> None:
     assert metrics["`make demo` on a fresh clone"].value == NOT_RUN
 
 
+def test_demo_runtime_comes_from_the_fixture_pipeline_run(tmp_path: Path) -> None:
+    write(
+        tmp_path / "a" / "pipeline" / "fixture" / "latest.json",
+        {"seconds": 36.1, "started_at": "2026-11-02T12:00:00Z"},
+    )
+    metrics = {m.name: m for m in collect(tmp_path / "a", tmp_path / "r", tmp_path / "s.jsonl")}
+    metric = metrics["End-to-end `make demo`"]
+    assert metric.value == "36.1 s"
+    assert metric.ran_at == "2026-11-02"
+
+
 def test_dig_survives_missing_levels() -> None:
     assert dig({"a": {"b": 1}}, "a", "b") == 1
     assert dig({"a": {}}, "a", "b", "c") is None
@@ -110,7 +121,7 @@ def test_the_report_says_how_much_is_measured() -> None:
     metrics = collect(Path("nowhere"), Path("nowhere"), Path("nowhere/s.jsonl"))
     text = render(metrics)
     assert "Nothing here is estimated" in text
-    assert "synthetic-looking" in text
+    assert "orders and reviews are synthetic" in text
     assert "**not run**" in text
 
 

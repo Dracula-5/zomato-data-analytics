@@ -20,17 +20,23 @@ This workspace already contains a mostly complete implementation of the Zomato A
 - Built and validated locally: `uv` project, `src/` package, `Makefile`, `.env.example`, lint/type/test tooling, synthetic fixture generation, ingestion + lake, dbt warehouse setup, dashboard scaffolding, quality checks, demo pipeline, and the full CI/test suite.
 - Broken / blocked in this environment: no code-level failures remained after running `make check`; the remaining gaps are environment-dependent features that were not executed because they require Docker/cloud/console credentials or optional paid services.
 - Missing / not run here: live Snowflake/AWS execution, Terraform deployment, Neo4j/GDS run, full Airflow scheduler replay, and any paid LLM/live evaluation calls unless explicitly enabled.
-- Status: good for portfolio use and passthrough validation, not for cloud execution without credentials.
+- Render API and Vercel frontend are now prepared for a public SYNTHETIC demo; external provider setup and deployment remain pending.
+- Status: locally validated and deployment-configured, but no Render or Vercel public URL has been created.
 
-### Validation refresh (2026-11-02)
+### Validation refresh (2026-11-03)
 
-- `make check`: passed (602 passed, 6 skipped, 92.47% line/branch coverage).
+- `make check`: passed (609 passed, 6 skipped, 91.92% line/branch coverage).
 - `make demo`: passed on the SYNTHETIC fixture; 92 dbt nodes completed with no errors.
 - `make local-full` and `make local`: passed on full source data and a 5% user sample.
 - `make forecast`, `make recsys`, `make stream-eval`, and `make bench`: completed locally.
 - Terraform formatting/validation passed; the Streamlit health endpoint returned HTTP 200 and
   the Overview and Live Ops pages rendered.
+- The new FastAPI endpoints returned HTTP 200 against the generated fixture; the React/Vite
+  app passed a clean `npm ci` and production build.
+- Render and Vercel deployment manifests parse, and CI now builds the Render image and Vercel UI.
 - Docker-dependent graph/Airflow execution: not run; Docker Desktop's daemon was unavailable.
+- Local Render-image build: not run because Docker Desktop's daemon was unavailable.
+- Render/Vercel provisioning: not run; no provider login or project was configured.
 - Cloud and live-LLM execution: not run; no cloud credentials or OpenAI key are configured.
 - Regenerated `docs/METRICS.md` from artifacts present in this checkout; missing historical
   artifacts now display as "not run" rather than carrying forward unsupported claims.
@@ -52,8 +58,10 @@ This workspace already contains a mostly complete implementation of the Zomato A
 - [x] Milestone 12: simulated streaming + alerting implementation
 - [x] Milestone 13: Streamlit dashboard + replay-first LLM mode
 - [x] Milestone 14: package docs and project narrative
+- [x] Render/FastAPI API + Vercel React/Vite frontend prepared for a public synthetic demo
 - [x] Final validation: `make check` passes
 - [x] Final validation: `make demo` passes with the synthetic fixture
+- [ ] Render and Vercel accounts: create services, set the API URL/CORS origins, and verify public health checks
 - [ ] Optional cloud execution (Snowflake/AWS/OpenAI) requires credentials and is not run here
 - [ ] Optional Docker-dependent graph/Airflow runs are available but not executed in this local session
 

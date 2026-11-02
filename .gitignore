@@ -50,3 +50,10 @@ dbt/**/logs/
 .idea/
 .DS_Store
 Thumbs.db
+web/node_modules/
+web/dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# Local Azure AppOnboard session artifacts (may contain deployment details).
+.copilot-azure/

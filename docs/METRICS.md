@@ -16,7 +16,7 @@ history.
 |---|---|---|---|---|
 | `make demo` on a fresh clone | **not run** | SYNTHETIC fixture | `artifacts/fresh_clone.json` |  |
 | Install on a fresh clone, with packages already cached | **not run** | SYNTHETIC fixture | `artifacts/fresh_clone.json` |  |
-| End-to-end `make demo` | **205.2 s** | SYNTHETIC fixture | `artifacts/pipeline/fixture/latest.json` | 2026-11-02 |
+| End-to-end `make demo` | **67.0 s** | SYNTHETIC fixture | `artifacts/pipeline/fixture/latest.json` | 2026-11-02 |
 | Rows through the pipeline | **35,098,217** | Full data (synthetic orders/reviews; scraped-looking dimensions) | `artifacts/pipeline/full/latest.json` | 2026-11-02 |
 | Lake size | **0.53 GB** | Full data (synthetic orders/reviews; scraped-looking dimensions) | `artifacts/pipeline/full/latest.json` | 2026-11-02 |
 | End-to-end `make local-full` | **237.3 s** | Full data (synthetic orders/reviews; scraped-looking dimensions) | `artifacts/pipeline/full/latest.json` | 2026-11-02 |
@@ -170,6 +170,6 @@ history.
 
 | Metric | Value | Data | Source | Ran |
 |---|---|---|---|---|
-| Tests passing | **602** | Local run | `artifacts/pytest.xml` |  |
+| Tests passing | **609** | Local run | `artifacts/pytest.xml` |  |
 | SQL attacks refused | **92** | Local run | `artifacts/pytest.xml` |  |
-| Line and branch coverage | **92.47%** | Local run | `artifacts/coverage.json` |  |
+| Line and branch coverage | **91.92%** | Local run | `artifacts/coverage.json` |  |

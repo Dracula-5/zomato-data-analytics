@@ -87,6 +87,14 @@ Cloud, graph and Airflow steps are in [docs/CLOUD_SETUP.md](docs/CLOUD_SETUP.md)
 Paid LLM calls need `LLM_MODE=live` set for that run. Otherwise answers replay from `eval/replay/`,
 so tests and CI can't spend anything.
 
+## Public web demo (Render + Vercel)
+
+The repository includes a React/Vite frontend in [web/](web/) and a read-only FastAPI API in
+[src/zap/api.py](src/zap/api.py). The Render image builds its own SYNTHETIC fixture warehouse;
+the public frontend does not depend on your ignored local data. Follow
+[docs/DEPLOY_RENDER_VERCEL.md](docs/DEPLOY_RENDER_VERCEL.md) to connect the repo to Render and
+Vercel and configure CORS safely.
+
 ## Status
 
 The local path has been run on the full source data and the 5% user sample. `make check` and
@@ -99,6 +107,10 @@ were **not run in this validation**: cloud credentials are not configured and th
 unavailable. Live LLM calls were not made; the dashboard defaults to saved-answer replay. The
 stored evaluation results and their limitations are documented in
 [docs/EVALUATION.md](docs/EVALUATION.md).
+
+The Render API and Vercel frontend are now scaffolded, but have **not been deployed** to public
+URLs. Their public demo uses a synthetic DuckDB fixture; follow
+[docs/DEPLOY_RENDER_VERCEL.md](docs/DEPLOY_RENDER_VERCEL.md) to deploy them with your own accounts.
 
 No real-time order feed is publicly available, so the Live Ops page replays past orders and labels
 the feed SIMULATED. Its held-out results, including the smaller outages it misses, are in
@@ -131,3 +143,4 @@ the feed SIMULATED. Its held-out results, including the smaller outages it misse
 | [LEARNING_NOTES.md](docs/LEARNING_NOTES.md) | What was built each milestone, and what went wrong |
 | [DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) | Every table and column |
 | [CLOUD_SETUP.md](docs/CLOUD_SETUP.md) | Exact steps for AWS and Snowflake, with costs |
+| [DEPLOY_RENDER_VERCEL.md](docs/DEPLOY_RENDER_VERCEL.md) | Public demo deployment on Render and Vercel |

@@ -16,6 +16,8 @@ flowchart LR
     DBT --> MARTS[(Marts)]
 
     MARTS --> DASH[Streamlit dashboard]
+    MARTS --> API[Read-only FastAPI]
+    API --> WEB[React/Vite on Vercel]
     MARTS --> FC[Forecasts and anomalies]
     MARTS --> KG[(Neo4j + GDS)]
     MARTS --> REC[Recommender audit]
@@ -58,8 +60,18 @@ Snowflake in the cloud. Only `macros/cross_db.sql` knows they differ.
 | Agent | LangGraph flow with routing, approval and deterministic validation | `src/zap/agent/` |
 | Live feed | A SIMULATED order stream, minute windows and alerts, on a SQLite log | `src/zap/stream/` |
 | Scheduled analysis | A weekly digest that tests changes against noise, with a checked summary | `src/zap/insights/` |
-| Dashboard | Twelve Streamlit pages over the marts, the feed and published results | `app/`, `src/zap/dashboard/` |
-| Infrastructure | Terraform for S3 and IAM, versioned SQL for Snowflake, GitHub Actions for CI | `infra/`, `.github/` |
+| Dashboard | Twelve Streamlit pages over the marts, the feed and published results; React/Vite public demo | `app/`, `web/`, `src/zap/dashboard/` |
+| Public API | Read-only FastAPI endpoints over a bundled synthetic DuckDB fixture | `src/zap/api.py` |
+| Infrastructure | Terraform for S3 and IAM, Render API blueprint, Vercel static frontend, GitHub Actions for CI | `infra/`, `render.yaml`, `web/vercel.json`, `.github/` |
+
+## Public web demo
+
+The optional public demo separates a static React/Vite dashboard from a read-only FastAPI
+service. Render builds a small synthetic fixture and a DuckDB warehouse into its image; the
+service does not need a persistent disk or cloud database. The Vercel UI calls only aggregate
+GET endpoints. The API does not expose raw customer-level tables, write operations, or live
+LLM calls. The deployment wiring and provider steps are in
+[DEPLOY_RENDER_VERCEL.md](DEPLOY_RENDER_VERCEL.md).
 
 ## Data flow in detail
 

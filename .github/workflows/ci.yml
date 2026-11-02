@@ -46,6 +46,25 @@ jobs:
           name: test-reports
           path: artifacts/
 
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Type-check and build Vercel frontend
+        run: npm run build
+        working-directory: web
+
   terraform:
     runs-on: ubuntu-latest
     steps:
@@ -94,3 +113,11 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/opt/project:ro" -v "$PWD/airflow/dags:/opt/airflow/dags:ro" \
             -e PYTHONPATH=/opt/project/src zap-airflow:ci bash /opt/project/airflow/check_dags.sh
+
+  render-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the Render API image with its synthetic fixture warehouse
+        run: docker build -f Dockerfile.render -t zomato-ai-api:ci .

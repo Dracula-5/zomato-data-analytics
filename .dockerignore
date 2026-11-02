@@ -1,6 +1,18 @@
-# Whitelist: the build context is the repo root, but images need only the dependency
-# manifests. Data, virtualenvs, warehouses and any .env file can never enter an image.
+# Whitelist the application and dbt inputs used to build a small synthetic read-only
+# warehouse. Local data, artifacts, virtualenvs and secrets never enter the image.
 *
 !pyproject.toml
 !uv.lock
 !README.md
+!src/
+!src/**
+!contracts/
+!contracts/**
+!dbt/
+!dbt/**
+dbt/**/.user.yml
+dbt/**/target/
+dbt/**/dbt_packages/
+dbt/**/logs/
+src/**/__pycache__/
+src/**/*.py[cod]

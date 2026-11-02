@@ -30,6 +30,10 @@ app = [
     "plotly>=5.24",
     "streamlit>=1.66",
 ]
+api = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+]
 cloud = [
     "boto3>=1.43.122",
     "snowflake-connector-python>=4.2,<5",
@@ -40,6 +44,7 @@ dbt = [
     "dbt-snowflake>=1.12.4",
 ]
 dev = [
+    "httpx>=0.27",
     "moto[iam,s3,sts]>=5.2.5",
     "mypy>=1.11",
     "pandas-stubs>=2.2",
@@ -67,7 +72,7 @@ build-backend = "uv_build"
 
 [tool.uv]
 # Every group is installed by default, so `uv run` never silently drops dbt or GX.
-default-groups = ["dev", "dbt", "quality", "app", "cloud", "forecast", "graph", "ai"]
+default-groups = ["dev", "dbt", "quality", "app", "api", "cloud", "forecast", "graph", "ai"]
 
 [tool.uv.build-backend]
 module-name = "zap"

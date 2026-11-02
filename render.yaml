@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: zomato-ai-data-platform-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: FRONTEND_ORIGINS
+        sync: false

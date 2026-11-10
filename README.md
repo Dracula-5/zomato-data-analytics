@@ -38,6 +38,7 @@ flowchart LR
     LAKE --> WH[(DuckDB or<br/>Snowflake)]
     WH --> DBT[dbt marts and<br/>governance]
     DBT --> DASH[Dashboard]
+    DBT --> PBI[Power BI report]
     DBT --> FC[Forecasts and anomalies]
     DBT --> KG[(Neo4j + GDS)]
     FC --> COP[LangGraph copilot]
@@ -58,6 +59,7 @@ flowchart LR
 | Streaming | A SIMULATED order feed with offsets, a watermark for late events and Poisson alerting |
 | Scheduled analysis | A weekly digest that tests each change against noise, on the Airflow schedule |
 | GenAI | Hybrid retrieval, Pydantic-validated output, text-to-SQL with a parsing guard, LangGraph |
+| Business intelligence | Power BI: a star schema exported from the dbt marts, DAX measures, a theme and a build guide (report file pending) |
 | Engineering | pytest, mypy strict, ruff, pre-commit, gitleaks, GitHub Actions |
 
 ## Run it
@@ -68,6 +70,7 @@ You need [uv](https://docs.astral.sh/uv/) and `make`. No data or accounts are ne
 uv sync --all-groups   # install exact versions from uv.lock
 make demo              # the whole pipeline on a generated SYNTHETIC dataset
 make app               # open the dashboard at http://localhost:8501
+make bi-export         # CSV files for the Power BI report, in bi/data/
 make check             # lint, type check and tests
 ```
 
@@ -86,6 +89,34 @@ make metrics           # regenerate docs/METRICS.md
 Cloud, graph and Airflow steps are in [docs/CLOUD_SETUP.md](docs/CLOUD_SETUP.md) and `make help`.
 Paid LLM calls need `LLM_MODE=live` set for that run. Otherwise answers replay from `eval/replay/`,
 so tests and CI can't spend anything.
+
+## Power BI dashboard
+
+A two-page Power BI report on the dbt marts, for readers who don't write SQL. **Business
+Overview** shows GMV, orders, average order value and cancellation rate, with a GMV trend, the top
+cities, and city and date slicers. **Forecast vs Actual** puts the ETS forecast against what
+happened, with its 80% band, its error and a plain-English note on what it says.
+
+`make bi-export` writes a star schema to `bi/data/` as CSV files: `mart_city_daily`,
+`mart_daily_kpis`, `dim_city`, `dim_date` and `forecast_vs_actual`. It uses the full warehouse
+when that's built and the SYNTHETIC fixture otherwise, so it also runs after `make demo`. The
+forecast rows are the walk-forward ETS backtest that METRICS.md scores, not a new model. Power BI
+Desktop is a Windows app, so the report itself is built by hand:
+[bi/POWER_BI_GUIDE.md](bi/POWER_BI_GUIDE.md) gives every click, with the DAX in
+[bi/measures.dax](bi/measures.dax) and a colorblind-safe theme in [bi/theme.json](bi/theme.json).
+
+**Status:** the export, guide, measures and theme are done. The report file
+(`bi/zomato_platform.pbix`) and its screenshots are **pending**.
+
+<!-- Screenshots: delete this line and the closing line once the PNGs are in bi/screenshots/.
+<p>
+  <img src="bi/screenshots/01_business_overview.png" alt="Power BI: Business Overview page" width="49%">
+  <img src="bi/screenshots/02_forecast_vs_actual.png" alt="Power BI: Forecast vs Actual page" width="49%">
+</p>
+<p>
+  <img src="bi/screenshots/03_star_schema.png" alt="Power BI model view: the star schema" width="60%">
+</p>
+-->
 
 ## Public web demo (Render + Vercel)
 
@@ -144,3 +175,4 @@ the feed SIMULATED. Its held-out results, including the smaller outages it misse
 | [DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) | Every table and column |
 | [CLOUD_SETUP.md](docs/CLOUD_SETUP.md) | Exact steps for AWS and Snowflake, with costs |
 | [DEPLOY_RENDER_VERCEL.md](docs/DEPLOY_RENDER_VERCEL.md) | Public demo deployment on Render and Vercel |
+| [POWER_BI_GUIDE.md](bi/POWER_BI_GUIDE.md) | Building the Power BI report, click by click |

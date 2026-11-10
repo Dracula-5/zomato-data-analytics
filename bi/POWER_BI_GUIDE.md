@@ -432,9 +432,11 @@ each under 800 KB (the pre-commit limit); a report page is usually 150–400 KB.
 | `bi/screenshots/03_star_schema.png` | Model view, all five tables and the four relationships visible |
 | `bi/screenshots/04_city_drilldown.png` (optional) | Page 1 with one city chosen in the slicer and the last six months in the date slicer |
 
-Then open [README.md](../README.md), find the commented-out images in the "Power BI dashboard"
-section, remove the `<!--` and `-->` lines around them, and remove "(pending .pbix + screenshots)"
-from the Power BI bullet in [RESUME_BULLETS.md](../RESUME_BULLETS.md).
+Then open [README.md](../README.md) and, in the "Power BI dashboard" section, delete the `<!--`
+line and the `-->` line around the images and change the **Status** line to say the report is
+done. In the stack table, drop "(report file pending)". In
+[RESUME_BULLETS.md](../RESUME_BULLETS.md), remove "(pending .pbix + screenshots)" from the
+Power BI bullet.
 
 ## Troubleshooting
 

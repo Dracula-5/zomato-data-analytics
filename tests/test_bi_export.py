@@ -1,6 +1,7 @@
 """`zap bi-export`: the files Power BI reads, checked on the SYNTHETIC fixture warehouse."""
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -318,3 +319,33 @@ def test_anything_that_would_break_a_relationship_stops_the_export(
     tables[table] = pd.DataFrame(frame)
     with pytest.raises(BiExportError, match=message):
         check_tables(tables, start, end)
+
+
+def dax_measures(text: str, name_line: str) -> dict[str, str]:
+    """{measure: its DAX with comments and spacing removed}, split on each definition line."""
+    text = re.sub(r"//[^\n]*", "", text)
+    parts = re.split(name_line, text, flags=re.MULTILINE)[1:]
+    pairs = zip(parts[::2], parts[1::2], strict=True)
+    return {name.strip(): " ".join(body.split()) for name, body in pairs}
+
+
+def test_the_guide_and_measures_dax_define_the_same_measures() -> None:
+    text = (BI / "measures.dax").read_text(encoding="utf-8")
+    dax = re.split(r"^EVALUATE", text, flags=re.MULTILINE)[0]
+    in_file = dax_measures(dax, r"^\s*MEASURE\s+\w+\[([^\]]+)\]\s*=")
+    guide = (BI / "POWER_BI_GUIDE.md").read_text(encoding="utf-8")
+    block = guide.split("```dax", 1)[1].split("```", 1)[0]
+    in_guide = dax_measures(block, r"^(\S[^=\n]*?) =$")
+    assert set(in_file) >= MEASURES
+    assert in_guide == in_file  # the same names and the same DAX, so either can be pasted
+    missing = [name for name in in_file if f"`{name}`" not in guide.split("```dax")[-1]]
+    assert not missing, f"no format given in the guide for {missing}"
+    for table in COLUMNS:
+        assert f"{table}.csv" in guide
+
+
+def test_the_theme_is_valid_and_the_screenshot_folder_exists() -> None:
+    theme = json.loads((BI / "theme.json").read_text(encoding="utf-8"))
+    assert theme["name"] and len(theme["dataColors"]) == 8
+    assert all(re.fullmatch(r"#[0-9A-Fa-f]{6}", color) for color in theme["dataColors"])
+    assert (BI / "screenshots" / ".gitkeep").exists()

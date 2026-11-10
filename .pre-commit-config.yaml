@@ -11,6 +11,12 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=800"]
+        exclude: ^bi/.*\.pbix$
+      # The Power BI report embeds its imported tables, so it gets its own, larger cap.
+      - id: check-added-large-files
+        name: check for added large files (Power BI report, 25 MB cap)
+        args: ["--maxkb=25000"]
+        files: ^bi/.*\.pbix$
       - id: detect-private-key
 
   - repo: https://github.com/gitleaks/gitleaks

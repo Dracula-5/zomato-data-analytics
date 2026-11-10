@@ -3,3 +3,5 @@
 *.ps1 text eol=crlf
 *.png binary
 *.jpg binary
+# Power BI report: a zip archive. Never diff, merge or convert line endings.
+*.pbix binary

@@ -1,0 +1,131 @@
+// DAX measures for the Power BI report. See bi/POWER_BI_GUIDE.md, step 5.
+//
+// Fast way: paste this whole file into DAX query view, click Run, then click
+// "Update model with changes" (or the "Update model: Add new measure" link above each
+// MEASURE). The EVALUATE at the end prints the numbers to check against
+// bi/data/export_manifest.json.
+//
+// Rates are ratios of sums, never averages of the rate columns: averaging a city's 4% and
+// another's 10% says nothing about the two together. GMV counts delivered orders only,
+// as the dbt marts define it. Orders are synthetic.
+
+DEFINE
+    // ---- Page 1: business overview (mart_city_daily, so the city slicer applies) ----
+    MEASURE mart_city_daily[Total GMV] =
+        SUM ( mart_city_daily[gmv] )
+
+    MEASURE mart_city_daily[Orders] =
+        SUM ( mart_city_daily[orders] )
+
+    MEASURE mart_city_daily[Delivered Orders] =
+        SUM ( mart_city_daily[delivered_orders] )
+
+    MEASURE mart_city_daily[Cancelled Orders] =
+        SUM ( mart_city_daily[cancelled_orders] )
+
+    MEASURE mart_city_daily[AOV] =
+        DIVIDE ( [Total GMV], [Delivered Orders] )
+
+    MEASURE mart_city_daily[Cancel Rate] =
+        DIVIDE ( [Cancelled Orders], [Orders] )
+
+    // The latest calendar month in view against the month before it. On a month axis that
+    // is each month; on a card it is the last month the slicers leave in.
+    MEASURE mart_city_daily[GMV MoM %] =
+        VAR LatestMonth =
+            EOMONTH ( MAX ( mart_city_daily[order_date] ), -1 ) + 1
+        VAR MonthDates =
+            CALCULATETABLE (
+                VALUES ( dim_date[date] ),
+                REMOVEFILTERS ( dim_date ),
+                dim_date[month_start] = LatestMonth
+            )
+        VAR ThisMonth =
+            CALCULATE ( [Total GMV], MonthDates )
+        VAR PreviousMonth =
+            CALCULATE ( [Total GMV], DATEADD ( MonthDates, -1, MONTH ) )
+        RETURN
+            IF (
+                NOT ISBLANK ( ThisMonth ) && NOT ISBLANK ( PreviousMonth ),
+                DIVIDE ( ThisMonth - PreviousMonth, PreviousMonth )
+            )
+
+    // ---- Page 2: forecast vs actual (pick ONE scope in the slicer) ----
+    MEASURE forecast_vs_actual[Actual GMV] =
+        SUM ( forecast_vs_actual[actual_gmv] )
+
+    MEASURE forecast_vs_actual[Forecast GMV] =
+        SUM ( forecast_vs_actual[forecast_gmv] )
+
+    MEASURE forecast_vs_actual[Forecast GMV Lower] =
+        SUM ( forecast_vs_actual[forecast_gmv_lower] )
+
+    MEASURE forecast_vs_actual[Forecast GMV Upper] =
+        SUM ( forecast_vs_actual[forecast_gmv_upper] )
+
+    // Backtest days only: positive means actual GMV came in above the forecast.
+    MEASURE forecast_vs_actual[GMV vs Forecast %] =
+        VAR Actual =
+            CALCULATE ( [Actual GMV], forecast_vs_actual[period] = "backtest" )
+        VAR Forecast =
+            CALCULATE ( [Forecast GMV], forecast_vs_actual[period] = "backtest" )
+        RETURN
+            DIVIDE ( Actual - Forecast, Forecast )
+
+    // Mean absolute percentage error over the backtest, the way zap forecast scores it.
+    MEASURE forecast_vs_actual[MAPE GMV] =
+        AVERAGEX (
+            FILTER (
+                forecast_vs_actual,
+                forecast_vs_actual[period] = "backtest"
+                    && forecast_vs_actual[actual_gmv] > 0
+            ),
+            ABS ( forecast_vs_actual[forecast_gmv] - forecast_vs_actual[actual_gmv] )
+                / forecast_vs_actual[actual_gmv]
+        )
+
+    MEASURE forecast_vs_actual[MAPE Orders] =
+        AVERAGEX (
+            FILTER (
+                forecast_vs_actual,
+                forecast_vs_actual[period] = "backtest"
+                    && forecast_vs_actual[actual_orders] > 0
+            ),
+            ABS ( forecast_vs_actual[forecast_orders] - forecast_vs_actual[actual_orders] )
+                / forecast_vs_actual[actual_orders]
+        )
+
+    // Share of backtest days whose actual GMV landed inside the 80% band.
+    MEASURE forecast_vs_actual[Days Inside Band %] =
+        VAR Banded =
+            FILTER (
+                forecast_vs_actual,
+                forecast_vs_actual[period] = "backtest"
+                    && NOT ISBLANK ( forecast_vs_actual[forecast_gmv_lower] )
+            )
+        VAR Inside =
+            FILTER (
+                Banded,
+                forecast_vs_actual[actual_gmv] >= forecast_vs_actual[forecast_gmv_lower]
+                    && forecast_vs_actual[actual_gmv] <= forecast_vs_actual[forecast_gmv_upper]
+            )
+        RETURN
+            DIVIDE ( COUNTROWS ( Inside ), COUNTROWS ( Banded ) )
+
+// Check: with no filters these match export_manifest.json ("totals_for_checking_the_report",
+// and "national_mape_pct" divided by 100).
+EVALUATE
+ROW (
+    "Total GMV", [Total GMV],
+    "Orders", [Orders],
+    "Delivered Orders", [Delivered Orders],
+    "AOV", [AOV],
+    "Cancel Rate", [Cancel Rate],
+    "GMV MoM % (latest month)", [GMV MoM %],
+    "MAPE Orders, National", CALCULATE ( [MAPE Orders], forecast_vs_actual[scope] = "National" ),
+    "MAPE GMV, National", CALCULATE ( [MAPE GMV], forecast_vs_actual[scope] = "National" ),
+    "GMV vs Forecast %, National",
+        CALCULATE ( [GMV vs Forecast %], forecast_vs_actual[scope] = "National" ),
+    "Days Inside Band %, National",
+        CALCULATE ( [Days Inside Band %], forecast_vs_actual[scope] = "National" )
+)

@@ -284,6 +284,36 @@ def forecast_cmd(dataset: DatasetOpt = None) -> None:
     typer.echo(f"Report: {settings.artifacts_dir / 'forecast_backtest.json'}")
 
 
+@app.command("bi-export")
+def bi_export_cmd(
+    dataset: Annotated[
+        str | None,
+        typer.Option(help="Warehouse to export (default: full if it's built, else fixture)."),
+    ] = None,
+    out: Annotated[Path, typer.Option(help="Folder for the CSV files.")] = Path("bi/data"),
+) -> None:
+    """Write the marts and the ETS forecast as CSV files for Power BI (bi/POWER_BI_GUIDE.md)."""
+    from zap.bi_export import BiExportError, export, pick_dataset
+
+    settings = get_settings()
+    try:
+        label = pick_dataset(settings.duckdb_path, dataset)
+        manifest = export(settings.duckdb_path(label), out)
+    except BiExportError as err:
+        typer.echo(f"ERROR: {err}", err=True)
+        raise typer.Exit(code=1) from err
+    typer.echo(f"Exported dataset '{label}' ({manifest['data']}) to {out}")
+    for name, table in manifest["tables"].items():
+        typer.echo(f"  {name + '.csv':<24} {table['rows']:>9,} rows")
+    forecast = manifest["forecast"]
+    typer.echo(
+        f"Forecast: {forecast['source']}; {forecast['folds']} folds; national MAPE "
+        f"orders {forecast['national_mape_pct']['orders']:.2f}%, "
+        f"GMV {forecast['national_mape_pct']['gmv']:.2f}%"
+    )
+    typer.echo(f"Text for the forecast page: {out / 'forecast_note.txt'}")
+
+
 @app.command("recsys")
 def recsys_cmd(dataset: DatasetOpt = "full") -> None:
     """Audit the orders for taste, then score recommenders on a temporal split."""

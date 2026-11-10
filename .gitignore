@@ -17,6 +17,8 @@ htmlcov/
 /warehouse/
 /artifacts/
 /.cache/
+# `make bi-export` output: rebuilt from the warehouse, and derived from the private data.
+/bi/data/
 *.duckdb
 *.duckdb.wal
 *.parquet

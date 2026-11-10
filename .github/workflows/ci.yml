@@ -39,6 +39,9 @@ jobs:
       - name: Whole pipeline + dbt build on the SYNTHETIC fixture
         run: make demo
 
+      - name: Power BI export on the SYNTHETIC fixture
+        run: make bi-export
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7

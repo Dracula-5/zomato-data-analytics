@@ -348,6 +348,9 @@ def digest_cmd(
     brief: Annotated[
         bool, typer.Option(help="Also write a checked summary. Paid when LLM_MODE=live.")
     ] = True,
+    markdown: Annotated[
+        Path | None, typer.Option(help="Also write the digest as a Markdown page here.")
+    ] = None,
 ) -> None:
     """Compare the latest week with the one before, and test each change against noise."""
     from zap.insights import digest as weekly
@@ -363,6 +366,10 @@ def digest_cmd(
         typer.echo(f"  {line}")
     typer.echo(f"Brief: {report['brief'] or 'none'}")
     typer.echo(f"Report: {path}")
+    if markdown:
+        markdown.parent.mkdir(parents=True, exist_ok=True)
+        markdown.write_text(weekly.to_markdown(report), encoding="utf-8", newline="\n")
+        typer.echo(f"Markdown: {markdown}")
 
 
 @app.command("metrics")

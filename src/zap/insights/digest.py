@@ -195,6 +195,49 @@ def write_brief(client: LlmClient, lines: list[str]) -> str | None:
         return None
 
 
+def to_markdown(digest: dict[str, Any]) -> str:
+    """The digest as a page for a manager: the findings first, then the evidence behind them."""
+    period, previous = digest["period"], digest["previous"]
+    dataset = digest.get("dataset", "unknown")
+    label = "SYNTHETIC fixture" if dataset == "fixture" else "orders and reviews are synthetic"
+    rows = [
+        f"| {city['city']} | {city['this_week']:,} | {city['last_week']:,} | "
+        + (f"{city['change']:+.1%}" if city["change"] is not None else "n/a")
+        + f" | {city['z']:+.2f} | {city['q']:.3f} |"
+        for city in digest["cities"]
+    ]
+    lines = [
+        f"# Weekly digest: {period['first']} to {period['last']}",
+        "",
+        f"Compared with {previous['first']} to {previous['last']}. Dataset: `{dataset}` "
+        f"({label}). Written by `zap digest` at {digest.get('ran_at', 'an unknown time')}.",
+        "",
+        "## Findings",
+        "",
+        *(f"- {line}" for line in digest["findings"]),
+        "",
+        "## Brief",
+        "",
+        digest.get("brief")
+        or "None. A brief is written only with `LLM_MODE=live` (a paid call) or from a saved "
+        "answer, and it is dropped if it quotes a number the findings don't contain.",
+        "",
+        f"## The {len(rows)} largest cities, tested",
+        "",
+        "| City | Orders this week | Orders last week | Change | z | q |",
+        "|---|---:|---:|---:|---:|---:|",
+        *rows,
+        "",
+        "## How to read it",
+        "",
+        "Two weeks of orders always differ. `z` is the gap divided by the noise expected if order "
+        f"counts are random (Poisson): beyond ±{NOTEWORTHY_Z:.0f} is unusual. `q` is the chance-"
+        f"adjusted p-value after testing every city together (Benjamini-Hochberg); a city counts "
+        f"as moved only below {ALPHA}. A week where nothing moved is a normal week.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def save(digest: dict[str, Any], folder: Path) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
     text = json.dumps(digest, indent=2, ensure_ascii=False)

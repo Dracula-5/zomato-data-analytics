@@ -110,10 +110,35 @@ def test_the_command_writes_the_digest(
     monkeypatch.setenv("WAREHOUSE_DIR", str(pipeline[0].warehouse_dir))
     monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     get_settings.cache_clear()
-    result = CliRunner().invoke(app, ["digest", "--dataset", "fixture", "--no-brief"])
+    page = tmp_path / "docs" / "digest.md"
+    result = CliRunner().invoke(
+        app, ["digest", "--dataset", "fixture", "--no-brief", "--markdown", str(page)]
+    )
     get_settings.cache_clear()
     assert result.exit_code == 0, result.output
-    assert digest.load_latest(tmp_path / "digest") is not None
+    saved = digest.load_latest(tmp_path / "digest")
+    assert saved is not None
+    text = page.read_text(encoding="utf-8")
+    assert "(SYNTHETIC fixture)" in text and "## Findings" in text
+    assert all(f"- {line}" in text for line in saved["findings"])
+    assert text.count("\n| ") == len(saved["cities"]) + 1  # a header, then a row per city
+
+
+def test_the_markdown_page_shows_the_brief_and_a_city_new_this_week() -> None:
+    report = facts(cities=[{"city": "Goa", "this_week": 4, "last_week": 0, "change": None}])
+    report["cities"][0].update(z=2.0, q=0.5)
+    report.update(
+        period={"first": "2026-06-24", "last": "2026-06-30"},
+        previous={"first": "2026-06-17", "last": "2026-06-23"},
+        dataset="full",
+        brief="Orders held steady.",
+        findings=["Orders rose 1.0%."],
+    )
+    text = digest.to_markdown(report)
+    assert "Orders held steady." in text and "orders and reviews are synthetic" in text
+    assert "| Goa | 4 | 0 | n/a | +2.00 | 0.500 |" in text
+    report["brief"] = None
+    assert "None. A brief is written only with `LLM_MODE=live`" in digest.to_markdown(report)
 
 
 def test_review_helpers_need_the_ai_schema(pipeline: Pipeline) -> None:

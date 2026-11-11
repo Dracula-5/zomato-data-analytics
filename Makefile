@@ -81,8 +81,8 @@ stream: ## Run the SIMULATED live feed (Ctrl+C or the Live Ops page stops it)
 stream-eval: ## Measure the feed: false alarms and SYNTHETIC outages on held-out days
 	$(RUN) zap stream eval --dataset full --skip-days 14 --name stream_eval_holdout
 
-digest: ## Compare the latest week with the one before. Paid only with LLM_MODE=live
-	$(RUN) zap digest --dataset full
+digest: ## Latest week vs the one before (DATASET=fixture for the demo). Paid only with LLM_MODE=live
+	$(RUN) zap digest --dataset $(DATASET)
 
 screenshots: ## Screenshot every page into docs/images (needs `make app` running, and Chrome)
 	uv run --no-project --with playwright python scripts/screenshots.py

@@ -3,10 +3,26 @@
 Every number under "Bullets" comes from [docs/METRICS.md](docs/METRICS.md), and a test fails if one
 doesn't. If a metric changes, change the bullet. Pick the ones that fit each application.
 
-**Title:** Zomato AI Data Platform – Data Engineering, Analytics & AI | Python, SQL, Snowflake, dbt,
-Power BI
+**Titles:**
+- Data and AI roles: Zomato AI Data Platform – Data Engineering, Analytics & AI | Python, SQL,
+  Snowflake, dbt, Power BI
+- Operations and program roles: Zomato Business Metrics & Operations Analytics
 
 ## Bullets
+
+**Operations analytics (for the second title)**
+
+- KPI tracking: daily KPIs by city (GMV, orders, AOV, cancellation rate, discount rate, active
+  customers) and late-delivery rates nationally by day and by city and hour, over 35,098,217 rows
+  refreshed end to end in 237.3 s.
+- Trend monitoring: demand forecast at 0.64% MAPE against a 1.16% baseline; anomaly alerts caught
+  85.4% of SYNTHETIC planted incidents against 7.8% for a plain z-score; built a weekly digest that
+  tests each city's week against noise, scheduled in the daily Airflow DAG.
+- Reliable numbers: 26 data-quality rules flagged 1,068,344 records for review and quarantined 273,
+  alongside 66 dbt tests and 32 Great Expectations checks.
+- Self-serve: a plain-English question assistant answered 88.9% of golden questions correctly, and a
+  Power BI report on city GMV, orders and forecast against actual (pending .pbix + screenshots).
+  Orders and reviews are synthetic.
 
 **Data platform**
 
@@ -32,7 +48,7 @@ Power BI
 
 - Evaluated hybrid retrieval over the project's documents at 0.852 Recall@5, against 0.685 for
   BM25; guarded text-to-SQL scored 88.9% execution accuracy and RAG answers 86.0% faithfulness on
-  golden sets, with 625 tests passing at 92.20% line and branch coverage.
+  golden sets, with 632 tests passing at 92.36% line and branch coverage.
 - Built a LangGraph router at 96.8% accuracy against a 74.2% keyword baseline; tests refused 92
   SQL attacks.
 
@@ -96,8 +112,15 @@ plausible score needed a control or an honest limitation:
 - Snowflake/AWS, Airflow or Neo4j/GDS results as part of the latest validation: they ran on
   2026-10-30 in an earlier working copy, and METRICS.md shows them as not run until their run
   files are restored (see above).
-- That FDR correction removed the 9,791 dish pairs: they had already passed it. Testing within each
-  restaurant removed them.
+- That FDR correction (or "a statistical correction") removed the 9,791 dish pairs: they had
+  already passed it. Testing within each restaurant, which removes the confounding, removed them.
+- That 66 tests missed the rounding bug: when the engines were compared, the project had 63 tests
+  (and 88 `dbt build` steps). 66 is today's count.
+- That 1,068,344 records were bad: 273 were errors (quarantined). 931,906 were warnings, 600,000 of
+  them reviews whose restaurant or user didn't match their order (fixed in staging), and 136,165
+  were informational, such as restaurants with no rating.
+- City-level daily SLA breaches: `mart_city_daily` has no SLA column. Late deliveries are daily
+  nationally and by city and hour of day.
 - The older figures from the 2026-10-31 runs (289.2 s end to end, 91.8% faster fact models, a 2.6x
   mart, 565 tests at 92.65% coverage): the 2026-11-02 runs replaced them.
 - A finished Power BI report until the `.pbix` and its screenshots are committed.

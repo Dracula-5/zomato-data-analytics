@@ -170,6 +170,6 @@ history.
 
 | Metric | Value | Data | Source | Ran |
 |---|---|---|---|---|
-| Tests passing | **625** | Local run | `artifacts/pytest.xml` |  |
+| Tests passing | **632** | Local run | `artifacts/pytest.xml` |  |
 | SQL attacks refused | **92** | Local run | `artifacts/pytest.xml` |  |
-| Line and branch coverage | **92.20%** | Local run | `artifacts/coverage.json` |  |
+| Line and branch coverage | **92.36%** | Local run | `artifacts/coverage.json` |  |

@@ -10,7 +10,7 @@ export PYTHONUTF8 := 1
 SAMPLE_PCT ?= 5
 
 .PHONY: help setup lint format typecheck test check hooks fixtures info \
-        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve stream stream-eval digest screenshots metrics recsys forecast bench bi-export app api web \
+        drift-check ingest ingest-full ingest-fixture local local-full demo docs docs-serve stream stream-eval digest insights screenshots metrics recsys forecast bench bi-export app api web \
         up-neo4j down-neo4j graph airflow-bootstrap airflow-up airflow-up-snowflake airflow-down airflow-replay \
         airflow-replay-snowflake airflow-smoke \n        cloud-keys cloud-whoami cloud-infra cloud-setup cloud-upload cloud-load cloud-dbt cloud-check cloud-bench cloud-destroy
 
@@ -81,8 +81,11 @@ stream: ## Run the SIMULATED live feed (Ctrl+C or the Live Ops page stops it)
 stream-eval: ## Measure the feed: false alarms and SYNTHETIC outages on held-out days
 	$(RUN) zap stream eval --dataset full --skip-days 14 --name stream_eval_holdout
 
-digest: ## Compare the latest week with the one before. Paid only with LLM_MODE=live
-	$(RUN) zap digest --dataset full
+digest: ## Latest week vs the one before (DATASET=fixture for the demo). Paid only with LLM_MODE=live
+	$(RUN) zap digest --dataset $(DATASET)
+
+insights: ## Run the business-insight queries in docs/insights; results to docs/insights/RESULTS.md
+	$(RUN) zap insights --dataset $(DATASET)
 
 screenshots: ## Screenshot every page into docs/images (needs `make app` running, and Chrome)
 	uv run --no-project --with playwright python scripts/screenshots.py

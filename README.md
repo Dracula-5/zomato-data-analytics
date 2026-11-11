@@ -1,20 +1,110 @@
-# Zomato AI Data Platform
+# Zomato Business Metrics & Operations Analytics
 
-A food-delivery data platform that takes raw files through to dashboards, forecasts, a knowledge
-graph and an AI copilot, and is built to say what its data can't support.
+The daily numbers a food-delivery operation runs on, by city: what was sold, what was cancelled
+or late, whether today is unusual, and what the next two weeks look like, with checks that the
+numbers can be trusted. Underneath is a data platform with forecasting, alerting and an AI
+assistant that runs free on a laptop.
 
-It runs for free on a laptop with DuckDB. Optional S3 and Snowflake deployment paths are included
-but require cloud accounts and credentials.
+> **About the data:** the orders and reviews are synthetic, and the restaurant and menu data look
+> scraped from a real delivery site. Every number describes this dataset, not Zomato's business.
+> Incidents planted to test a detector are labelled SYNTHETIC. The data isn't in this repo.
 
-> **About the data:** the orders and reviews are synthetic, while the restaurant and menu data looks
-> scraped from a real delivery site. Results describe this dataset, not real food delivery, and
-> anything planted to test a detector is labelled SYNTHETIC. The data isn't in this repo.
+**The problem.** An operations team needs to know each morning which cities are on track, which
+deliveries are running late, and whether a dip is a real incident or normal noise, and it needs to
+trust the numbers before acting on them.
+
+**Who it's for.** City and operations managers who review the morning numbers, program managers
+who track delivery SLAs and plan capacity, and analysts who answer the follow-up questions.
+
+| KPI tracked | How it's cut |
+|---|---|
+| Delivered GMV, orders, average order value | daily, by city |
+| Cancellation rate, discount rate, active customers | daily, by city |
+| Late deliveries (slower than the 40-minute promise) | daily nationally; by city and hour of day |
+| Forecast against actual (orders and GMV) | daily, nationally and for the 10 busiest cities |
+
+| Headline | What it means |
+|---|---|
+| **35.1M rows** refreshed end to end in **237.3 s** | the whole pipeline, all seven source files, on a laptop |
+| **0.64%** average daily forecast error | against 1.16% for "same as last week" |
+| **85.4%** of planted incidents caught by the daily alert | against 7.8% for a plain z-score alert (SYNTHETIC incidents) |
+| **1,068,344** records flagged by 26 data-quality rules | 273 of them quarantined before reaching a report |
+
+![The dashboard's overview page](docs/images/home.png)
+
+**Status:** the local pipeline, forecasts, alerts, weekly digest and Streamlit dashboard run and
+are measured ([docs/METRICS.md](docs/METRICS.md), runs of 2026-11-02). The S3/Snowflake, Airflow
+and Neo4j paths are built, but their runs aren't part of that validation. The Power BI report is
+prepared but not built yet.
 
 [![CI](https://github.com/Dracula-5/zomato-data-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/Dracula-5/zomato-data-analytics/actions/workflows/ci.yml)
 
-![The Knowledge Graph page](docs/images/knowledge_graph.png)
+## Business insights
 
-## What it found
+Five findings from the real outputs on the full dataset, written for an operations or program
+manager. **The orders are synthetic**, so read these as what the dashboards would tell you, not as
+facts about Zomato. Every number comes from
+[docs/insights/RESULTS.md](docs/insights/RESULTS.md), which `make insights` regenerates from the
+SQL files beside it.
+
+**1. Saturdays bring 60.9% more orders than Wednesdays.**
+- *Finding:* over the last 12 months, Saturdays averaged 18,462 orders and Wednesdays 11,474
+  (+60.9%). Friday is +35.5% and Sunday +45.4%; Monday to Thursday are within 5.2% of each other.
+- *Why it matters:* riders, restaurant prep and support sized for the weekly average are short on
+  three days out of seven.
+- *Recommended action:* plan supply by weekday from the forecast (insight 4), with Friday to Sunday
+  as peak days.
+- *Metric to track:* orders by weekday against forecast, and the late-delivery rate on Friday to
+  Sunday.
+
+**2. One delivery in five is late, at every hour and in every large city.**
+- *Finding:* 19.4% of 9,150,122 delivered orders took longer than the 40-minute promise. The
+  median delivery takes 31 minutes and the slowest tenth 45 minutes or more. The late share stays
+  between 19.2% and 19.7% across hours of the day, although the busiest hour has 119 times the
+  orders of the quietest, and between 19.3% and 19.5% across the 10 largest cities.
+- *Why it matters:* lateness that doesn't rise with load isn't a peak-capacity problem, so adding
+  riders at peak hours wouldn't reduce it. It comes from where the promise sits against normal
+  delivery times. (In this synthetic data, delivery time doesn't depend on load; on real data,
+  this is the first thing to check.)
+- *Recommended action:* review the 40-minute promise against the delivery-time distribution, and
+  find what drives the slowest tenth of orders before funding more peak-hour supply.
+- *Metric to track:* late-delivery rate by hour and city, and the 90th-percentile delivery time.
+
+**3. Ten of 552 cities hold 61.6% of GMV.**
+- *Finding:* over the last 12 months, the top 10 cities took 61.6% of delivered GMV and 44 cities
+  took 80%. Bangalore alone took 12.2%. Average order value ranges from ₹442 in Chandigarh to ₹611
+  in Mumbai among the top 10, while cancellations sit between 5.9% and 6.0% in all of them.
+- *Why it matters:* a problem in one large city moves the national numbers, while the same problem
+  in a small city vanishes in them.
+- *Recommended action:* tier the monitoring: daily review and alerts for the top 10 cities, weekly
+  for the next 34, monthly for the rest. Set order-value targets per city, not nationally.
+- *Metric to track:* the top 10 cities' share of GMV, and each city's AOV and cancellation rate
+  against its own baseline.
+
+**4. The demand forecast is accurate enough to plan two weeks ahead.**
+- *Finding:* the forecast's average daily error on national orders is 0.64%, against 1.16% for
+  "same as last week", over 8 tests of 14 days each on days it hadn't seen. It expects 222,779
+  orders for 1 to 14 July 2026, 0.7% more than the previous 14 days, and ₹9.83 crore of GMV (+0.6%).
+- *Why it matters:* below 1% daily error, staffing and promotions can be planned against the
+  forecast instead of last week's numbers.
+- *Recommended action:* publish the 14-day forecast every week, and treat any day that lands
+  outside its expected range as an exception to explain.
+- *Metric to track:* daily actual against forecast (GMV vs Forecast % in the Power BI report) and
+  the forecast's MAPE.
+
+**5. Alerts catch big drops reliably and small ones only sometimes.**
+- *Finding:* on incidents planted on purpose (SYNTHETIC), the daily alert caught 99.9% of 50% drops
+  in a series, 89.9% of 30% drops and 63.7% of 20% drops, at 2.08 false alarms per 1,000 normal
+  days. A plain z-score alert caught 7.8% of all incidents. On the real data it flagged 48 of 20,064
+  series-days, close to the 42 its false-alarm rate predicts, so nothing stands out beyond noise.
+- *Why it matters:* 36.3% of 20% drops go unflagged on the day, and a 20% loss in a large city is
+  a real loss.
+- *Recommended action:* use the daily alert for large incidents and the weekly digest, which tests
+  each city's week against noise ([sample](docs/sample_digest.md)), for smaller, slower declines.
+- *Metric to track:* share of incidents caught by size, false alarms per 1,000 days, and time to
+  detect.
+
+## What the checks found
 
 The most useful results came from checking things that looked true.
 
@@ -160,6 +250,10 @@ the feed SIMULATED. Its held-out results, including the smaller outages it misse
 | Data quality | AI evaluation |
 |---|---|
 | ![Data quality](docs/images/data_quality.png) | ![AI evaluation](docs/images/ai_evaluation.png) |
+
+| Delivery SLA | Knowledge graph |
+|---|---|
+| ![Delivery SLA](docs/images/delivery_sla.png) | ![Knowledge graph](docs/images/knowledge_graph.png) |
 
 ## Read more
 

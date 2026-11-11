@@ -348,6 +348,9 @@ def digest_cmd(
     brief: Annotated[
         bool, typer.Option(help="Also write a checked summary. Paid when LLM_MODE=live.")
     ] = True,
+    markdown: Annotated[
+        Path | None, typer.Option(help="Also write the digest as a Markdown page here.")
+    ] = None,
 ) -> None:
     """Compare the latest week with the one before, and test each change against noise."""
     from zap.insights import digest as weekly
@@ -363,6 +366,31 @@ def digest_cmd(
         typer.echo(f"  {line}")
     typer.echo(f"Brief: {report['brief'] or 'none'}")
     typer.echo(f"Report: {path}")
+    if markdown:
+        markdown.parent.mkdir(parents=True, exist_ok=True)
+        markdown.write_text(weekly.to_markdown(report), encoding="utf-8", newline="\n")
+        typer.echo(f"Markdown: {markdown}")
+
+
+@app.command("insights")
+def insights_cmd(
+    dataset: Annotated[str, typer.Option(help="Warehouse to query.")] = "full",
+    queries: Annotated[Path, typer.Option(help="Folder of .sql files.")] = Path("docs/insights"),
+    out: Annotated[Path, typer.Option(help="Where to write the results.")] = Path(
+        "docs/insights/RESULTS.md"
+    ),
+) -> None:
+    """Run the business-insight queries in docs/insights and write their results."""
+    from zap.insights.findings import write
+
+    db_path = get_settings().duckdb_path(dataset)
+    if not db_path.exists():
+        typer.echo(f"ERROR: no warehouse for dataset '{dataset}' ({db_path})", err=True)
+        raise typer.Exit(code=1)
+    for result in write(db_path, queries, out, dataset):
+        status = f"skipped: {result.skipped}" if result.skipped else "ok"
+        typer.echo(f"  {result.name:<28} {status}")
+    typer.echo(f"Results: {out}")
 
 
 @app.command("metrics")
